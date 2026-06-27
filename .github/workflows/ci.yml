@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push: { branches: [main] }
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'npm' }
+
+      - name: Install (root + workspaces)
+        run: npm install
+
+      - name: Build domain
+        run: npm -w @ava/domain run build
+
+      - name: Typecheck domain
+        run: npm -w @ava/domain run typecheck
+
+      - name: Unit tests (domain — reference-range, QC, badge)
+        run: npm -w @ava/domain run test
+
+      - name: Install RLS test deps
+        working-directory: supabase/tests
+        run: npm install
+
+      - name: RLS tests (real Postgres via PGlite — liability firewall)
+        run: node supabase/tests/rls.test.mjs
+
+      - name: Parity (edge logic == domain logic)
+        run: node --experimental-strip-types supabase/tests/parity.test.mjs
+
+  # Deploy berjalan hanya di main, setelah test hijau.
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Supabase CLI
+        uses: supabase/setup-cli@v1
+      - name: Apply migrations to production
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+          supabase db push
+          supabase functions deploy issue-badge ai-analyze schedule-reminders
+      # Frontend (Vercel) ter-deploy otomatis via integrasi Git Vercel.

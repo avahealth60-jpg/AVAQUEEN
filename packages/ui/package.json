@@ -1,0 +1,2 @@
+{ "name": "@ava/ui", "version": "1.0.0", "type": "module", "main": "./index.tsx",
+  "peerDependencies": { "react": "^18" } }
