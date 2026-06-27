@@ -1,4 +1,18 @@
-{ "name": "@ava/db", "version": "1.0.0", "type": "module",
+{
+  "name": "@ava/db",
+  "version": "1.0.0",
+  "type": "module",
   "main": "./src/index.ts",
-  "scripts": { "gen": "supabase gen types typescript --local > src/database.types.ts" },
-  "dependencies": { "@supabase/supabase-js": "^2.45.0" } }
+  "types": "./src/index.ts",
+  "scripts": {
+    "gen": "supabase gen types typescript --local > src/database.types.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ava/domain": "*",
+    "@supabase/supabase-js": "^2.45.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}

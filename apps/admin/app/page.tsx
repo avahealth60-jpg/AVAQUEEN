@@ -1,89 +1,88 @@
-'use client';
-/**
- * AVA Admin · QC Monitoring Engine (wedge).
- * Memantau status kalibrasi & badge seluruh armada mitra secara real-time.
- * Data nyata datang dari Supabase (RLS: hanya ava_admin). Di sini disuntik
- * contoh + memakai logika @ava/domain untuk status & jatuh tempo.
- */
-import React, { useMemo, useState } from 'react';
-import { reminderStatus, badgeStatus, type QcResult } from '@ava/domain';
-import { VerifiedBadge } from '@ava/ui';
+// apps/admin/app/page.tsx — Ringkasan: kondisi armada sekarang + antrian tindakan.
+import React from 'react';
+import Link from 'next/link';
+import { stats, fleet, isConfigured } from '../lib/data';
+import { deriveAll } from '../lib/derive';
+import { PageHead, QcTag, DueTag, ConnBanner, Empty } from '../components/widgets';
 
-interface FleetRow {
-  serial: string;
-  vendor: string;
-  model: string;
-  qc: QcResult;
-  performedAt: string;
-  nextDueAt: string;
-  badgeExpiresAt: string;
-}
+export const dynamic = 'force-dynamic';
 
-// Contoh; di produksi di-fetch dari view qc_fleet (RLS ava_admin).
-const SAMPLE: FleetRow[] = [
-  { serial: 'SN-V1-001', vendor: 'Vendor Satu', model: 'Tensimeter A', qc: 'lulus', performedAt: '2025-01-15', nextDueAt: '2026-01-15', badgeExpiresAt: '2026-01-15' },
-  { serial: 'SN-V1-002', vendor: 'Vendor Satu', model: 'Glukometer B', qc: 'perlu_tinjau', performedAt: '2024-08-01', nextDueAt: '2025-08-01', badgeExpiresAt: '2025-08-01' },
-  { serial: 'SN-V2-001', vendor: 'Vendor Dua', model: 'Oximeter C', qc: 'gagal', performedAt: '2024-03-10', nextDueAt: '2025-03-10', badgeExpiresAt: '2025-03-10' },
-];
-
-export default function QcDashboard() {
+export default async function Dashboard() {
   const now = new Date();
-  const [filter, setFilter] = useState<'all' | 'attention'>('all');
-
-  const rows = useMemo(() => {
-    return SAMPLE.map((r) => ({
-      ...r,
-      due: reminderStatus(new Date(r.nextDueAt), now),
-      badge: badgeStatus(new Date(r.badgeExpiresAt), now),
-    })).filter((r) => filter === 'all' || r.due !== 'ok' || r.qc !== 'lulus');
-  }, [filter]);
+  const configured = isConfigured();
+  const [s, rows] = await Promise.all([stats(now), fleet()]);
+  const queue = deriveAll(rows, now).filter((r) => r.needsAction).slice(0, 8);
 
   return (
-    <main style={{ fontFamily: 'system-ui', padding: 24, maxWidth: 1000, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 22, fontWeight: 700, color: '#0F172A' }}>QC Monitoring Engine</h1>
-      <p style={{ color: '#475569' }}>Status kalibrasi & badge armada mitra.</p>
+    <>
+      <PageHead
+        eyebrow="Operasi · Ringkasan"
+        title="Kondisi armada"
+        sub="Pantau kalibrasi, QC, dan badge seluruh alat mitra dalam satu pandangan."
+      />
+      {!configured && <ConnBanner />}
 
-      <div style={{ margin: '12px 0' }}>
-        <button onClick={() => setFilter('all')} style={btn(filter === 'all')}>Semua</button>
-        <button onClick={() => setFilter('attention')} style={btn(filter === 'attention')}>Perlu tindakan</button>
+      <div className="tiles">
+        <div className="tile">
+          <div className="tile__label">Alat terdaftar</div>
+          <div className="tile__num">{s.devices}</div>
+          <div className="tile__foot">{s.vendors} vendor · {s.labs} lab</div>
+        </div>
+        <div className={`tile ${s.overdueCalibrations ? 'tile--alert' : ''}`}>
+          <div className="tile__label">Kalibrasi lewat tempo</div>
+          <div className="tile__num">{s.overdueCalibrations}</div>
+          <div className="tile__foot">butuh tindakan segera</div>
+        </div>
+        <div className={`tile ${s.dueSoonCalibrations ? 'tile--warn' : ''}`}>
+          <div className="tile__label">Jatuh tempo ≤ 30 hari</div>
+          <div className="tile__num">{s.dueSoonCalibrations}</div>
+          <div className="tile__foot">jadwalkan ulang</div>
+        </div>
+        <div className="tile">
+          <div className="tile__label">Badge AVA aktif</div>
+          <div className="tile__num">{s.activeBadges}</div>
+          <div className="tile__foot">dari {s.devices} alat</div>
+        </div>
       </div>
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-        <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #E2E8F0' }}>
-            <th style={th}>Serial</th><th style={th}>Vendor</th><th style={th}>Model</th>
-            <th style={th}>QC</th><th style={th}>Jatuh tempo</th><th style={th}>Badge</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.serial} style={{ borderBottom: '1px solid #F1F5F9' }}>
-              <td style={td}>{r.serial}</td>
-              <td style={td}>{r.vendor}</td>
-              <td style={td}>{r.model}</td>
-              <td style={td}><QcTag qc={r.qc} /></td>
-              <td style={td}><DueTag due={r.due} date={r.nextDueAt} /></td>
-              <td style={td}><VerifiedBadge status={r.badge} /></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </main>
+      <div className="card">
+        <div className="card__title">Antrian tindakan</div>
+        {queue.length === 0 ? (
+          <Empty
+            title={configured ? 'Semua alat aman' : 'Belum ada data'}
+            hint={configured
+              ? 'Tidak ada kalibrasi lewat tempo, QC gagal, atau badge mati.'
+              : 'Sambungkan Supabase untuk melihat armada mitra.'}
+          />
+        ) : (
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>Serial</th><th>Model</th><th>Vendor</th>
+                  <th>QC</th><th>Jatuh tempo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {queue.map((r) => (
+                  <tr key={r.deviceId}>
+                    <td className="mono">{r.serial}</td>
+                    <td>{r.modelName}</td>
+                    <td>{r.vendorName}</td>
+                    <td><QcTag qc={r.qc} /></td>
+                    <td><DueTag status={r.due} date={r.nextDueAt} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {queue.length > 0 && (
+          <div style={{ marginTop: 12 }}>
+            <Link className="link" href="/qc">Lihat semua di Monitoring QC →</Link>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
-
-function QcTag({ qc }: { qc: QcResult }) {
-  const c = { lulus: '#15803D', perlu_tinjau: '#B45309', gagal: '#B91C1C' }[qc];
-  return <span style={{ color: c, fontWeight: 600 }}>{qc}</span>;
-}
-function DueTag({ due, date }: { due: 'ok' | 'due_soon' | 'overdue'; date: string }) {
-  const map = { ok: ['#15803D', date], due_soon: ['#B45309', `${date} (segera)`], overdue: ['#B91C1C', `${date} (lewat!)`] } as const;
-  const [c, label] = map[due];
-  return <span style={{ color: c }}>{label}</span>;
-}
-const th: React.CSSProperties = { padding: '8px 6px', fontWeight: 600, color: '#334155' };
-const td: React.CSSProperties = { padding: '8px 6px' };
-const btn = (active: boolean): React.CSSProperties => ({
-  marginRight: 8, padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
-  border: '1px solid #CBD5E1', background: active ? '#0E7C66' : '#fff', color: active ? '#fff' : '#0F172A',
-});
