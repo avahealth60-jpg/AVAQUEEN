@@ -7,7 +7,7 @@
 create schema if not exists app;
 
 -- Profil pengguna; sumber kebenaran PERAN aplikasi.
-CREATE TABLE IF NOT EXISTS IF NOT EXISTS profiles (
+CREATE TABLE IF NOT EXISTS profiles (
   id          uuid primary key,                 -- = auth.users.id
   role        user_role not null default 'customer',
   full_name   text,
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS calibrations (
   created_at   timestamptz not null default now()
 );
 
-CREATE TABLE IF NOT EXISTS IF NOT EXISTS IF NOT EXISTS qc_results (
+CREATE TABLE IF NOT EXISTS IF NOT EXISTS qc_results (
   id              uuid primary key default gen_random_uuid(),
   calibration_id  uuid not null references calibrations(id),
   result          qc_result not null,
