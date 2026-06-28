@@ -1,10 +1,5 @@
-// apps/admin/app/layout.tsx — shell + gerbang auth.
-// Aturan:
-//  - Auth belum dikonfigurasi (dev) → tampilkan konsol langsung (halaman
-//    menampilkan banner "belum tersambung"). Tak ada data untuk dijaga.
-//  - Dikonfigurasi & belum login → form masuk.
-//  - Login tapi peran ≠ ava_admin → akses ditolak.
-//  - ava_admin → konsol penuh.
+import '@ava/ui/src/tokens.css';
+import { Inter, Space_Grotesk, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import React from 'react';
 import { Sidebar } from '../components/Sidebar';
@@ -13,6 +8,10 @@ import { SignOutButton } from '../components/SignOutButton';
 import { NotAuthorized } from '../components/widgets';
 import { getAuth } from '../lib/auth';
 import { stats, isConfigured } from '../lib/data';
+
+const inter = Inter({ subsets: ['latin'], variable: '--ava-font-body' });
+const display = Space_Grotesk({ subsets: ['latin'], variable: '--ava-font-display' });
+const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--ava-font-mono' });
 
 export const metadata = { title: 'AVA Admin · Konsol QC' };
 
@@ -46,5 +45,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     );
   }
 
-  return (<html lang="id"><body>{body}</body></html>);
+  return (
+    <html lang="id" className={`${inter.variable} ${display.variable} ${mono.variable}`}>
+      <body>{body}</body>
+    </html>
+  );
 }

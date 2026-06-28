@@ -34,3 +34,4 @@ export function VerifiedBadge({ status }: { status: 'active' | 'expired' }) {
 
 export const EDU_DISCLAIMER =
   'Informasi ini bersifat edukatif dan BUKAN diagnosis. Konsultasikan dengan tenaga kesehatan berlisensi.';
+export * from './v110.js';
