@@ -17,8 +17,10 @@ create table if not exists commissions (
 );
 
 alter table commissions enable row level security;
+drop policy if exists "doctor reads own commissions" on commissions;
 create policy "doctor reads own commissions" on commissions
   for select using (doctor_id = auth.uid());
+drop policy if exists "admin reads commissions" on commissions;
 create policy "admin reads commissions" on commissions
   for select using (app.is_admin());
 
@@ -47,10 +49,12 @@ create trigger trg_record_commission
 
 -- 4) Direktori dokter: pengguna terautentikasi boleh melihat profil dokter
 --    (nama + id) agar masyarakat dapat memilih dokter saat booking.
+drop policy if exists "authenticated reads doctor profiles" on profiles;
 create policy "authenticated reads doctor profiles" on profiles
   for select using (role = 'doctor');
 
 -- 5) Dokter boleh melihat profil pasien yang berkonsultasi dengannya (nama).
+drop policy if exists "doctor reads own patients" on profiles;
 create policy "doctor reads own patients" on profiles
   for select using (
     exists (

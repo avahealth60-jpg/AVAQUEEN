@@ -24,11 +24,23 @@ const GROUPS: Group[] = [
     ],
   },
   {
+    title: 'Superadmin',
+    items: [
+      { href: '/inspektur', label: 'Inspektur peran' },
+    ],
+  },
+  {
     title: 'Tata kelola',
     items: [
       { href: '/kepatuhan', label: 'Kepatuhan' },
       { href: '/keuangan', label: 'Keuangan' },
       { href: '/konfigurasi', label: 'Konfigurasi' },
+    ],
+  },
+  {
+    title: 'Superadmin',
+    items: [
+      { href: '/pratinjau', label: 'Pratinjau peran' },
     ],
   },
 ];

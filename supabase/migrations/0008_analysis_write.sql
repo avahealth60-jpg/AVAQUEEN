@@ -4,6 +4,7 @@
 -- disclaimer) tetap dijaga CHECK di tabel analysis_results.
 -- Triase dihitung @ava/domain (deterministik, teruji) lalu disimpan lewat ini.
 
+drop policy if exists "customer writes analysis for own readings" on analysis_results;
 create policy "customer writes analysis for own readings" on analysis_results
   for insert with check (
     exists (

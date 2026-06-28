@@ -3,6 +3,7 @@
 -- "vendor reads calibrations of own devices"). Tanpa ini, portal vendor hanya
 -- bisa menampilkan status badge, bukan alasan lulus/gagal QC-nya.
 
+drop policy if exists "vendor reads qc of own devices" on qc_results;
 create policy "vendor reads qc of own devices" on qc_results
   for select using (
     exists (

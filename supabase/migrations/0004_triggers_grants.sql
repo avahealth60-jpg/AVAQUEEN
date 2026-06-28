@@ -11,6 +11,7 @@ begin
   return coalesce(new, old);
 end; $$;
 
+drop trigger if exists trg_audit_badge on badges;
 create trigger trg_audit_badge
   after insert or update or delete on badges
   for each row execute function app.audit_badge();
@@ -29,6 +30,7 @@ begin
   return new;
 end; $$;
 
+drop trigger if exists trg_set_calibration_due on calibrations;
 create trigger trg_set_calibration_due
   before insert on calibrations
   for each row execute function app.set_calibration_due();

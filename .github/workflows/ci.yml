@@ -45,12 +45,19 @@ jobs:
         with: { node-version: '22' }
       - name: Supabase CLI
         uses: supabase/setup-cli@v1
-      - name: Apply migrations to production
+      - name: Apply migrations to production (jika dikonfigurasi)
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
-          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+          if [ -z "$PROJECT_REF" ]; then
+            echo "ℹ️ SUPABASE_PROJECT_REF belum di-set di GitHub Secrets."
+            echo "   Deploy otomatis dilewati (migrasi diterapkan manual via SQL Editor)."
+            echo "   Untuk mengaktifkan: set secrets SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD, SUPABASE_PROJECT_REF."
+            exit 0
+          fi
+          supabase link --project-ref "$PROJECT_REF"
           supabase db push
           supabase functions deploy issue-badge ai-analyze schedule-reminders
       # Frontend (Vercel) ter-deploy otomatis via integrasi Git Vercel.

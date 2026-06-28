@@ -215,3 +215,79 @@ export async function getCommissionStats(db: SupabaseClient | null): Promise<Com
     avaRevenue: rows.reduce((s, r) => s + Number(r.commission_amount), 0),
   };
 }
+
+// ── Inspektur peran (superadmin "lihat sebagai") — service-role, read-only ──
+export interface NamedRow { id: string; name: string; }
+
+export async function listProfilesByRole(db: SupabaseClient | null, role: string): Promise<NamedRow[]> {
+  if (!db) return [];
+  const { data } = await db.from('profiles').select('id, full_name').eq('role', role).order('full_name');
+  return ((data ?? []) as { id: string; full_name: string | null }[]).map((p) => ({ id: p.id, name: p.full_name ?? '(tanpa nama)' }));
+}
+
+export async function listOrganizations(db: SupabaseClient | null, kind: string): Promise<NamedRow[]> {
+  if (!db) return [];
+  const { data } = await db.from('organizations').select('id, name').eq('kind', kind).order('name');
+  return ((data ?? []) as { id: string; name: string }[]).map((o) => ({ id: o.id, name: o.name }));
+}
+
+export interface InspectReading { type: string; display: string; takenAt: string; triage: string | null; }
+export interface InspectConsult { id: string; counterpart: string; status: string; fee: number; shared: InspectReading[]; }
+
+const READ_LABEL: Record<string, string> = {
+  glucose_fasting: 'Gula darah puasa', spo2: 'SpO₂', heart_rate: 'Detak jantung',
+  temperature: 'Suhu', blood_pressure: 'Tekanan darah',
+};
+const readDisplay = (t: string, v: Record<string, unknown>) =>
+  t === 'blood_pressure' ? `${v.systolic}/${v.diastolic}` : String(v.value ?? '');
+
+export async function inspectCustomer(db: SupabaseClient | null, customerId: string) {
+  if (!db || !customerId) return { readings: [] as InspectReading[], consults: [] as InspectConsult[] };
+  const [rd, cs] = await Promise.all([
+    db.from('health_readings').select('id, reading_type, value, taken_at').eq('customer_id', customerId).order('taken_at', { ascending: false }),
+    db.from('consultations').select('id, doctor_id, status, fee').eq('customer_id', customerId).order('created_at', { ascending: false }),
+  ]);
+  const rows = (rd.data ?? []) as { id: string; reading_type: string; value: Record<string, unknown>; taken_at: string }[];
+  const anIds = rows.map((r) => r.id);
+  const triage = new Map<string, string>();
+  if (anIds.length) {
+    const { data: an } = await db.from('analysis_results').select('reading_id, triage').in('reading_id', anIds);
+    ((an ?? []) as { reading_id: string; triage: string }[]).forEach((a) => triage.set(a.reading_id, a.triage));
+  }
+  const docIds = [...new Set(((cs.data ?? []) as { doctor_id: string }[]).map((c) => c.doctor_id))];
+  const docNames = new Map<string, string>();
+  if (docIds.length) {
+    const { data: docs } = await db.from('profiles').select('id, full_name').in('id', docIds);
+    ((docs ?? []) as { id: string; full_name: string | null }[]).forEach((d) => docNames.set(d.id, d.full_name ?? 'Dokter'));
+  }
+  return {
+    readings: rows.map((r) => ({ type: READ_LABEL[r.reading_type] ?? r.reading_type, display: readDisplay(r.reading_type, r.value), takenAt: r.taken_at, triage: triage.get(r.id) ?? null })),
+    consults: ((cs.data ?? []) as { id: string; doctor_id: string; status: string; fee: number }[]).map((c) => ({ id: c.id, counterpart: docNames.get(c.doctor_id) ?? 'Dokter', status: c.status, fee: c.fee, shared: [] })),
+  };
+}
+
+export async function inspectDoctor(db: SupabaseClient | null, doctorId: string): Promise<InspectConsult[]> {
+  if (!db || !doctorId) return [];
+  const { data: cs } = await db.from('consultations')
+    .select('id, customer_id, status, fee, shared_reading_ids').eq('doctor_id', doctorId).order('created_at', { ascending: false });
+  const rows = (cs ?? []) as { id: string; customer_id: string; status: string; fee: number; shared_reading_ids: string[] }[];
+  const patIds = [...new Set(rows.map((r) => r.customer_id))];
+  const names = new Map<string, string>();
+  if (patIds.length) {
+    const { data: p } = await db.from('profiles').select('id, full_name').in('id', patIds);
+    ((p ?? []) as { id: string; full_name: string | null }[]).forEach((x) => names.set(x.id, x.full_name ?? 'Pasien'));
+  }
+  const allShared = [...new Set(rows.flatMap((r) => r.shared_reading_ids ?? []))];
+  const rmap = new Map<string, { type: string; display: string }>();
+  const tmap = new Map<string, string>();
+  if (allShared.length) {
+    const { data: rd } = await db.from('health_readings').select('id, reading_type, value').in('id', allShared);
+    ((rd ?? []) as { id: string; reading_type: string; value: Record<string, unknown> }[]).forEach((r) => rmap.set(r.id, { type: READ_LABEL[r.reading_type] ?? r.reading_type, display: readDisplay(r.reading_type, r.value) }));
+    const { data: an } = await db.from('analysis_results').select('reading_id, triage').in('reading_id', allShared);
+    ((an ?? []) as { reading_id: string; triage: string }[]).forEach((a) => tmap.set(a.reading_id, a.triage));
+  }
+  return rows.map((r) => ({
+    id: r.id, counterpart: names.get(r.customer_id) ?? 'Pasien', status: r.status, fee: r.fee,
+    shared: (r.shared_reading_ids ?? []).map((id) => ({ type: rmap.get(id)?.type ?? '—', display: rmap.get(id)?.display ?? '', takenAt: '', triage: tmap.get(id) ?? null })),
+  }));
+}
