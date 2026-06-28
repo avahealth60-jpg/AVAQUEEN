@@ -34,28 +34,38 @@ describe('toFhirObservation', () => {
   });
 
   it('interpretation memetakan triase ke kode HL7', () => {
-    expect(make(88).interpretation[0].coding[0].code).toBe('N');
-    expect(make(108).interpretation[0].coding[0].code).toBe('A');
-    expect(make(126).interpretation[0].coding[0].code).toBe('AA');
+    const obs88 = make(88);
+    const obs108 = make(108);
+    const obs126 = make(126);
+    const code88 = obs88.interpretation[0]?.coding[0]?.code;
+    const code108 = obs108.interpretation[0]?.coding[0]?.code;
+    const code126 = obs126.interpretation[0]?.coding[0]?.code;
+    expect(code88).toBe('N');
+    expect(code108).toBe('A');
+    expect(code126).toBe('AA');
   });
 
   it('referenceRange ikut dengan low/high dari pita normal', () => {
     const obs = make(88);
-    expect(obs.referenceRange?.[0].low?.value).toBe(70);
-    expect(obs.referenceRange?.[0].high?.value).toBe(99);
+    const low = obs.referenceRange?.[0]?.low?.value;
+    const high = obs.referenceRange?.[0]?.high?.value;
+    expect(low).toBe(70);
+    expect(high).toBe(99);
   });
 
   it('tanpa LOINC memakai sistem kode internal AVA (tidak mengarang LOINC)', () => {
     const obs = make(88);
-    expect(obs.code.coding[0].system).toContain('ava.health');
-    expect(obs.code.coding[0].code).toBe('glukosa_puasa');
+    const coding = obs.code.coding[0];
+    expect(coding?.system).toContain('ava.health');
+    expect(coding?.code).toBe('glukosa_puasa');
   });
 
   it('dengan LOINC memakai sistem LOINC', () => {
     const withLoinc: Parameter = { ...param, loinc: '1558-6' };
     const obs = make(88, withLoinc);
-    expect(obs.code.coding[0].system).toBe('http://loinc.org');
-    expect(obs.code.coding[0].code).toBe('1558-6');
+    const coding = obs.code.coding[0];
+    expect(coding?.system).toBe('http://loinc.org');
+    expect(coding?.code).toBe('1558-6');
   });
 
   it('serialisasi JSON tanpa undefined yang bocor', () => {
