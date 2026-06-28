@@ -139,24 +139,54 @@ create policy "katalog panels readable" on panels
   for select using (true);
 drop policy if exists "katalog panels admin write" on panels;
 create policy "katalog panels admin write" on panels
-  for all using (auth.jwt() ->> 'role' = 'ava_admin')
-  with check (auth.jwt() ->> 'role' = 'ava_admin');
+  for all using (
+    coalesce(
+      (auth.jwt() ->> 'role'),
+      (auth.jwt() -> 'app_metadata' ->> 'role')
+    ) = 'ava_admin'
+  )
+  with check (
+    coalesce(
+      (auth.jwt() ->> 'role'),
+      (auth.jwt() -> 'app_metadata' ->> 'role')
+    ) = 'ava_admin'
+  );
 
 drop policy if exists "katalog parameters readable" on parameters;
 create policy "katalog parameters readable" on parameters
   for select using (true);
 drop policy if exists "katalog parameters admin write" on parameters;
 create policy "katalog parameters admin write" on parameters
-  for all using (auth.jwt() ->> 'role' = 'ava_admin')
-  with check (auth.jwt() ->> 'role' = 'ava_admin');
+  for all using (
+    coalesce(
+      (auth.jwt() ->> 'role'),
+      (auth.jwt() -> 'app_metadata' ->> 'role')
+    ) = 'ava_admin'
+  )
+  with check (
+    coalesce(
+      (auth.jwt() ->> 'role'),
+      (auth.jwt() -> 'app_metadata' ->> 'role')
+    ) = 'ava_admin'
+  );
 
 drop policy if exists "katalog ranges readable" on reference_ranges;
 create policy "katalog ranges readable" on reference_ranges
   for select using (true);
 drop policy if exists "katalog ranges admin write" on reference_ranges;
 create policy "katalog ranges admin write" on reference_ranges
-  for all using (auth.jwt() ->> 'role' = 'ava_admin')
-  with check (auth.jwt() ->> 'role' = 'ava_admin');
+  for all using (
+    coalesce(
+      (auth.jwt() ->> 'role'),
+      (auth.jwt() -> 'app_metadata' ->> 'role')
+    ) = 'ava_admin'
+  )
+  with check (
+    coalesce(
+      (auth.jwt() ->> 'role'),
+      (auth.jwt() -> 'app_metadata' ->> 'role')
+    ) = 'ava_admin'
+  );
 
 -- Masyarakat hanya pegang sesi & nilainya sendiri.
 drop policy if exists "customer owns checkups" on checkups;
