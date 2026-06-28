@@ -1,0 +1,86 @@
+/* AVA Health — Design Tokens (V1.1.0) — AUTO-GENERATED dari packages/ui/src/tokens.
+   Jangan edit manual; ubah token TS lalu generate ulang. */
+:root {
+  /* warna */
+  --ava-color-ink-900: #0E1614;
+  --ava-color-ink-700: #33403C;
+  --ava-color-ink-500: #5C6B66;
+  --ava-color-ink-300: #94A39D;
+  --ava-color-surface-0: #FFFFFF;
+  --ava-color-surface-50: #F5F8F7;
+  --ava-color-surface-100: #EBF0EE;
+  --ava-color-line: #D8E0DD;
+  --ava-color-line-strong: #BCC7C2;
+  --ava-color-trust-100: #DCF1E9;
+  --ava-color-trust-300: #7FCBB1;
+  --ava-color-trust-500: #138A6B;
+  --ava-color-trust-600: #0E6E55;
+  --ava-color-trust-900: #063A2C;
+  --ava-color-ok-500: #138A6B;
+  --ava-color-ok-100: #DCF1E9;
+  --ava-color-warn-500: #B7791A;
+  --ava-color-warn-100: #F7ECD6;
+  --ava-color-alert-500: #B23A2E;
+  --ava-color-alert-100: #F6DEDA;
+  --ava-color-neutral-500: #5C6B66;
+  --ava-color-neutral-100: #EBF0EE;
+  /* status: triase */
+  --ava-triage-normal-fg: #138A6B;
+  --ava-triage-normal-bg: #DCF1E9;
+  --ava-triage-perhatian-fg: #B7791A;
+  --ava-triage-perhatian-bg: #F7ECD6;
+  --ava-triage-segera-fg: #B23A2E;
+  --ava-triage-segera-bg: #F6DEDA;
+  /* status: qc */
+  --ava-qc-lulus-fg: #138A6B;
+  --ava-qc-lulus-bg: #DCF1E9;
+  --ava-qc-perlu-tinjau-fg: #B7791A;
+  --ava-qc-perlu-tinjau-bg: #F7ECD6;
+  --ava-qc-gagal-fg: #B23A2E;
+  --ava-qc-gagal-bg: #F6DEDA;
+  /* status: badge */
+  --ava-badge-active-fg: #138A6B;
+  --ava-badge-active-bg: #DCF1E9;
+  --ava-badge-expiring-fg: #B7791A;
+  --ava-badge-expiring-bg: #F7ECD6;
+  --ava-badge-expired-fg: #5C6B66;
+  --ava-badge-expired-bg: #EBF0EE;
+  /* tipografi */
+  --ava-font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  --ava-font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --ava-font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --ava-text-xs: 0.75rem;
+  --ava-text-sm: 0.875rem;
+  --ava-text-base: 1rem;
+  --ava-text-lg: 1.125rem;
+  --ava-text-xl: 1.375rem;
+  --ava-text-2xl: 1.75rem;
+  --ava-text-3xl: 2.25rem;
+  --ava-text-4xl: 3rem;
+  /* spacing */
+  --ava-space-0: 0;
+  --ava-space-1: 0.25rem;
+  --ava-space-2: 0.5rem;
+  --ava-space-3: 0.75rem;
+  --ava-space-4: 1rem;
+  --ava-space-5: 1.5rem;
+  --ava-space-6: 2rem;
+  --ava-space-7: 3rem;
+  --ava-space-8: 4rem;
+  /* radius */
+  --ava-radius-none: 0;
+  --ava-radius-sm: 4px;
+  --ava-radius-md: 8px;
+  --ava-radius-lg: 12px;
+  --ava-radius-full: 9999px;
+  /* elevasi */
+  --ava-elevation-none: none;
+  --ava-elevation-sm: 0 1px 2px rgba(14, 22, 20, 0.06);
+  --ava-elevation-md: 0 2px 8px rgba(14, 22, 20, 0.08);
+  --ava-elevation-lg: 0 8px 24px rgba(14, 22, 20, 0.10);
+  /* motion */
+  --ava-motion-fast: 120ms;
+  --ava-motion-base: 200ms;
+  --ava-motion-slow: 320ms;
+  --ava-motion-ease: cubic-bezier(0.2, 0, 0, 1);
+}
