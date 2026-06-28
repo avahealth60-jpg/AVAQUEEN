@@ -28,19 +28,19 @@ describe('evaluateParameter — gula darah puasa', () => {
   });
 
   it('sedikit di luar normal tapi belum kritis -> perhatian', () => {
-    expect(evaluateParameter(100, gula).triage).toBe('perhatian'); // tepat di atas normalMax
+    expect(evaluateParameter(100, gula).triage).toBe('perhatian');
     expect(evaluateParameter(108, gula).triage).toBe('perhatian');
-    expect(evaluateParameter(69, gula).triage).toBe('perhatian'); // di bawah normalMin
+    expect(evaluateParameter(69, gula).triage).toBe('perhatian');
   });
 
   it('melewati ambang kritis -> segera', () => {
-    expect(evaluateParameter(126, gula).triage).toBe('segera'); // > urgentHigh 125
-    expect(evaluateParameter(40, gula).triage).toBe('segera'); // < urgentLow 54
+    expect(evaluateParameter(126, gula).triage).toBe('segera');
+    expect(evaluateParameter(40, gula).triage).toBe('segera');
   });
 
   it('batas kritis bersifat strict ( = ambang masih perhatian, bukan segera )', () => {
-    expect(evaluateParameter(125, gula).triage).toBe('perhatian'); // == urgentHigh, tidak > 
-    expect(evaluateParameter(54, gula).triage).toBe('perhatian'); // == urgentLow, tidak <
+    expect(evaluateParameter(125, gula).triage).toBe('perhatian');
+    expect(evaluateParameter(54, gula).triage).toBe('perhatian');
   });
 
   it('alasan selalu edukatif & terisi', () => {
@@ -76,7 +76,7 @@ describe('evaluateParameter — tanpa rentang / tanpa pita normal', () => {
       source: 's', signedOffBy: 'k', signedOffAt: '2026-01-01',
     };
     expect(evaluateParameter(250, crit).triage).toBe('segera');
-    expect(evaluateParameter(150, crit).triage).toBe('normal'); // tak ada pita normal -> normal
+    expect(evaluateParameter(150, crit).triage).toBe('normal');
   });
 });
 
@@ -116,8 +116,8 @@ describe('evaluateCheckup — sesi utuh', () => {
       { parameter: p('glukosa_sewaktu'), value: 130, range: gula },
     ]);
     expect(out.results).toHaveLength(2);
-    expect(out.results[0].result.triage).toBe('normal');
-    expect(out.results[1].result.triage).toBe('segera');
+    expect(out.results[0]?.result.triage).toBe('normal');
+    expect(out.results[1]?.result.triage).toBe('segera');
     expect(out.summary).toBe('segera');
   });
 });
