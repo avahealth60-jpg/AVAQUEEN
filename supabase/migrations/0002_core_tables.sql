@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS calibrations (
   created_at   timestamptz not null default now()
 );
 
-CREATE TABLE IF NOT EXISTS IF NOT EXISTS qc_results (
+CREATE TABLE IF NOT EXISTS qc_results (
   id              uuid primary key default gen_random_uuid(),
   calibration_id  uuid not null references calibrations(id),
   result          qc_result not null,
