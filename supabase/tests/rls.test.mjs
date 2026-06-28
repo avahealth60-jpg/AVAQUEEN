@@ -46,9 +46,13 @@ await db.exec(`
   create or replace function auth.uid() returns uuid language sql stable as $$
     select (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub')::uuid;
   $$;
+  create or replace function auth.jwt() returns jsonb language sql stable as $$
+    select nullif(current_setting('request.jwt.claims', true), '')::jsonb;
+  $$;
+  create or replace function auth.role() returns text language sql stable as $$
+    select (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role')::text;
+  $$;
   grant usage on schema auth to authenticated, anon;
-  -- Stub auth.users (Supabase menyediakan ini; di sini cukup agar trigger
-  -- on_auth_user_created dari migrasi 0005 dapat dibuat & diuji).
   create table if not exists auth.users (
     id uuid primary key default gen_random_uuid(),
     email text,
