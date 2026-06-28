@@ -1,0 +1,12 @@
+{
+  "name": "AVA — Pendamping Kesehatan",
+  "short_name": "AVA",
+  "description": "Catat hasil pemeriksaan & dapatkan analisis edukatif.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F1F6F3",
+  "theme_color": "#0E7C66",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

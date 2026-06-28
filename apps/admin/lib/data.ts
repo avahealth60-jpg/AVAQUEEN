@@ -4,7 +4,7 @@
 // Mengembalikan data kosong bila env belum diset (banner, bukan crash).
 import {
   adminServerClient, isConfigured,
-  getFleet, getPartners, getDashboardStats, getConsents, getAuditLogs,
+  getFleet, getPartners, getDashboardStats, getConsents, getAuditLogs, getCommissionStats,
 } from '@ava/db';
 
 export { isConfigured };
@@ -14,3 +14,4 @@ export function partners() { return getPartners(adminServerClient()); }
 export function stats(now?: Date) { return getDashboardStats(adminServerClient(), now); }
 export function consents() { return getConsents(adminServerClient()); }
 export function auditLogs(limit?: number) { return getAuditLogs(adminServerClient(), limit); }
+export function commissionStats() { return getCommissionStats(adminServerClient()); }

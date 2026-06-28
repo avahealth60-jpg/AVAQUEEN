@@ -202,3 +202,16 @@ export async function getAuditLogs(
     .limit(limit);
   return (res.data ?? []) as AuditLog[];
 }
+
+// ── Komisi konsultasi (pendapatan AVA kedua) ────────────────────
+export interface CommissionStats { count: number; gross: number; avaRevenue: number; }
+export async function getCommissionStats(db: SupabaseClient | null): Promise<CommissionStats> {
+  if (!db) return { count: 0, gross: 0, avaRevenue: 0 };
+  const { data } = await db.from('commissions').select('gross_amount, commission_amount');
+  const rows = (data ?? []) as { gross_amount: number; commission_amount: number }[];
+  return {
+    count: rows.length,
+    gross: rows.reduce((s, r) => s + Number(r.gross_amount), 0),
+    avaRevenue: rows.reduce((s, r) => s + Number(r.commission_amount), 0),
+  };
+}

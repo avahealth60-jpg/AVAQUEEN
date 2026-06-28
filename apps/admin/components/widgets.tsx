@@ -68,3 +68,17 @@ export function ConnBanner() {
 export function Empty({ title, hint }: { title: string; hint: string }) {
   return <div className="empty"><strong>{title}</strong>{hint}</div>;
 }
+
+export function NotAuthorized({ email, signOut }: { email: string | null; signOut: React.ReactNode }) {
+  return (
+    <div className="login">
+      <div className="login__mark" style={{ background: 'var(--bad)' }}>!</div>
+      <h1 className="login__title">Akses ditolak</h1>
+      <p className="login__sub">
+        Akun {email ? <strong>{email}</strong> : 'ini'} tidak memiliki peran <code>ava_admin</code>.
+        Hubungi admin AVA untuk dipromosikan, lalu masuk kembali.
+      </p>
+      {signOut}
+    </div>
+  );
+}

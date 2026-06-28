@@ -1,28 +1,31 @@
 {
  "name": "ava-health",
-  "version": "1.0.0",
-  "private": true,
-  "packageManager": "npm@11.16.0",
-  "description": "AVA Health — platform kesehatan mandiri (trust layer / KBLI 86910)",
-  "workspaces": [
-    "packages/*",
-    "apps/*"
-  ],
-  "scripts": {
-    "build": "turbo run build",
-    "lint": "turbo run lint",
-    "typecheck": "turbo run typecheck",
-    "test": "turbo run test",
-    "test:domain": "npm -w @ava/domain run test",
-    "test:rls": "node supabase/tests/rls.test.mjs",
-    "test:parity": "node --experimental-strip-types supabase/tests/parity.test.mjs",
-    "test:all": "npm run test:domain && npm run test:rls && npm run test:parity"
-  },
-  "devDependencies": {
-    "turbo": "^2.0.0",
-    "typescript": "^5.5.4"
-  },
-  "engines": {
-    "node": ">=20"
-  }
+ "version": "1.0.0",
+ "private": true,
+ "packageManager": "npm@11.16.0",
+ "description": "AVA Health — platform kesehatan mandiri (trust layer / KBLI 86910)",
+ "workspaces": [
+  "packages/*",
+  "apps/*"
+ ],
+ "scripts": {
+  "build": "turbo run build",
+  "lint": "turbo run lint",
+  "typecheck": "turbo run typecheck",
+  "test": "turbo run test",
+  "test:domain": "npm -w @ava/domain run test",
+  "test:rls": "node supabase/tests/rls.test.mjs",
+  "test:parity": "node --experimental-strip-types supabase/tests/parity.test.mjs",
+  "test:all": "npm run test:domain && npm run test:rls && npm run test:parity"
+ },
+ "devDependencies": {
+  "turbo": "^2.0.0",
+  "typescript": "^5.5.4"
+ },
+ "engines": {
+  "node": ">=20"
+ },
+ "dependencies": {
+  "@electric-sql/pglite": "^0.5.3"
+ }
 }

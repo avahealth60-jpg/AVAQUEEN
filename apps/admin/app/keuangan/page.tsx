@@ -3,6 +3,7 @@
 // Angka di bawah adalah PROYEKSI dari basis alat ber-QC × tarif placeholder.
 import React from 'react';
 import { fleet, partners, isConfigured } from '../../lib/data';
+import { commissionStats } from '../../lib/data';
 import { PageHead, ConnBanner } from '../../components/widgets';
 
 export const dynamic = 'force-dynamic';
@@ -11,7 +12,7 @@ const TARIF_QC_PER_ALAT = 75000; // placeholder IDR/alat/tahun — atur di Konfi
 const rupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
 
 export default async function KeuanganPage() {
-  const [rows, mitra] = await Promise.all([fleet(), partners()]);
+  const [rows, mitra, komisi] = await Promise.all([fleet(), partners(), commissionStats()]);
   const billable = rows.filter((r) => r.qc !== null).length;
   const proyeksiTahunan = billable * TARIF_QC_PER_ALAT;
   const vendors = mitra.filter((m) => m.kind === 'vendor').length;
@@ -36,6 +37,16 @@ export default async function KeuanganPage() {
         <div className="tile"><div className="tile__label">Vendor berkontrak</div><div className="tile__num">{vendors}</div></div>
         <div className="tile"><div className="tile__label">Proyeksi/tahun</div><div className="tile__num" style={{ fontSize: 22 }}>{rupiah(proyeksiTahunan)}</div></div>
         <div className="tile"><div className="tile__label">Proyeksi/bulan</div><div className="tile__num" style={{ fontSize: 22 }}>{rupiah(Math.round(proyeksiTahunan / 12))}</div></div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card__title">Pendapatan konsultasi (komisi AVA, aktual)</div>
+        <div className="tiles" style={{ marginBottom: 0 }}>
+          <div className="tile"><div className="tile__label">Konsultasi selesai</div><div className="tile__num">{komisi.count}</div></div>
+          <div className="tile"><div className="tile__label">Nilai transaksi</div><div className="tile__num" style={{ fontSize: 22 }}>{rupiah(komisi.gross)}</div></div>
+          <div className="tile"><div className="tile__label">Komisi AVA (15%)</div><div className="tile__num" style={{ fontSize: 22 }}>{rupiah(komisi.avaRevenue)}</div></div>
+          <div className="tile"><div className="tile__label">Rata-rata/konsultasi</div><div className="tile__num" style={{ fontSize: 22 }}>{komisi.count ? rupiah(Math.round(komisi.avaRevenue / komisi.count)) : 'Rp 0'}</div></div>
+        </div>
       </div>
 
       <div className="card">

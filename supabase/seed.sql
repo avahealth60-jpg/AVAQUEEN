@@ -60,10 +60,8 @@ insert into qc_results (id, calibration_id, result, metrics, notes) values
    'lulus', '{"glucose_bias_pct": 2.1}'::jsonb, 'Dalam toleransi')
 on conflict (id) do nothing;
 
-insert into badges (id, device_id, calibration_id, status, expires_at) values
-  ('b0000000-0000-0000-0000-0000000000b1', 'e0000000-0000-0000-0000-000000000001',
-   'f0000000-0000-0000-0000-000000000001', 'active', current_date + 335)
-on conflict (id) do nothing;
+-- Badge tidak disisipkan manual: trigger trg_issue_badge_on_qc (migrasi 0006)
+-- menerbitkannya otomatis dari QC 'lulus' di atas.
 
 -- ── Health readings (Alice punya 2, Bob punya 1) ─────────────────
 insert into health_readings (id, customer_id, reading_type, value, unit, source) values

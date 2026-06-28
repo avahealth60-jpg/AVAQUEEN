@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { SignOutButton } from './SignOutButton';
 
 interface Item { href: string; label: string; }
 interface Group { title: string; items: Item[]; }
@@ -32,7 +33,7 @@ const GROUPS: Group[] = [
   },
 ];
 
-export function Sidebar({ alertCount = 0 }: { alertCount?: number }) {
+export function Sidebar({ alertCount = 0, email = null }: { alertCount?: number; email?: string | null }) {
   const path = usePathname();
   const isActive = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
 
@@ -70,6 +71,7 @@ export function Sidebar({ alertCount = 0 }: { alertCount?: number }) {
           })}
         </React.Fragment>
       ))}
+      <SignOutButton email={email} />
     </nav>
   );
 }
