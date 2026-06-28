@@ -1,2 +1,13 @@
-{ "name": "@ava/ui", "version": "1.0.0", "type": "module", "main": "./index.tsx",
-  "peerDependencies": { "react": "^18" } }
+{
+  "name": "@ava/ui",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./src/tokens.css": "./src/tokens.css"
+  },
+  "peerDependencies": {
+    "react": "^18"
+  }
+}
