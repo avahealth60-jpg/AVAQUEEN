@@ -7,7 +7,7 @@
 create schema if not exists app;
 
 -- Profil pengguna; sumber kebenaran PERAN aplikasi.
-create table profiles (
+CREATE TABLE IF NOT EXISTS IF NOT EXISTS profiles (
   id          uuid primary key,                 -- = auth.users.id
   role        user_role not null default 'customer',
   full_name   text,
@@ -15,7 +15,7 @@ create table profiles (
 );
 
 -- Organisasi mitra (faskes, vendor, lab).
-create table organizations (
+CREATE TABLE IF NOT EXISTS organizations (
   id          uuid primary key default gen_random_uuid(),
   name        text not null,
   kind        text not null check (kind in ('faskes','vendor','lab')),
@@ -23,7 +23,7 @@ create table organizations (
 );
 
 -- Keanggotaan pengguna pada organisasi (mis. petugas vendor / lab).
-create table organization_members (
+CREATE TABLE IF NOT EXISTS organization_members (
   organization_id uuid not null references organizations(id) on delete cascade,
   profile_id      uuid not null references profiles(id) on delete cascade,
   primary key (organization_id, profile_id)
@@ -49,7 +49,7 @@ returns boolean language sql stable security definer set search_path = public, a
 $$;
 
 -- ---------- QC engine (wedge) ----------
-create table device_models (
+CREATE TABLE IF NOT EXISTS device_models (
   id          uuid primary key default gen_random_uuid(),
   name        text not null,
   category    text,
@@ -58,7 +58,7 @@ create table device_models (
   calibration_interval_months int not null default 12 check (calibration_interval_months > 0)
 );
 
-create table devices (
+CREATE TABLE IF NOT EXISTS devices (
   id          uuid primary key default gen_random_uuid(),
   model_id    uuid not null references device_models(id),
   serial      text unique not null,
@@ -67,7 +67,7 @@ create table devices (
   registered_at timestamptz not null default now()
 );
 
-create table calibrations (
+CREATE TABLE IF NOT EXISTS calibrations (
   id           uuid primary key default gen_random_uuid(),
   device_id    uuid not null references devices(id),
   lab_id       uuid not null references organizations(id),
@@ -78,7 +78,7 @@ create table calibrations (
   created_at   timestamptz not null default now()
 );
 
-create table qc_results (
+CREATE TABLE IF NOT EXISTS IF NOT EXISTS IF NOT EXISTS qc_results (
   id              uuid primary key default gen_random_uuid(),
   calibration_id  uuid not null references calibrations(id),
   result          qc_result not null,
@@ -87,7 +87,7 @@ create table qc_results (
   created_at      timestamptz not null default now()
 );
 
-create table badges (
+CREATE TABLE IF NOT EXISTS badges (
   id              uuid primary key default gen_random_uuid(),
   device_id       uuid not null references devices(id),
   calibration_id  uuid not null references calibrations(id),
@@ -97,7 +97,7 @@ create table badges (
 );
 
 -- ---------- Hasil kesehatan & AI (posisi edukatif dikunci di skema) ----------
-create table health_readings (
+CREATE TABLE IF NOT EXISTS health_readings (
   id           uuid primary key default gen_random_uuid(),
   customer_id  uuid not null references profiles(id),
   reading_type text not null,
@@ -107,7 +107,7 @@ create table health_readings (
   source       text not null default 'manual'
 );
 
-create table analysis_results (
+CREATE TABLE IF NOT EXISTS analysis_results (
   id            uuid primary key default gen_random_uuid(),
   reading_id    uuid not null references health_readings(id),
   triage        triage_level not null,
@@ -120,7 +120,7 @@ create table analysis_results (
 );
 
 -- ---------- Konsultasi ----------
-create table consultations (
+CREATE TABLE IF NOT EXISTS consultations (
   id            uuid primary key default gen_random_uuid(),
   customer_id   uuid not null references profiles(id),
   doctor_id     uuid not null references profiles(id),
@@ -133,7 +133,7 @@ create table consultations (
 );
 
 -- ---------- Kepatuhan UU PDP ----------
-create table consents (
+CREATE TABLE IF NOT EXISTS consents (
   id          uuid primary key default gen_random_uuid(),
   customer_id uuid not null references profiles(id),
   purpose     text not null,
@@ -142,7 +142,7 @@ create table consents (
   withdrawn_at timestamptz
 );
 
-create table audit_logs (
+CREATE TABLE IF NOT EXISTS audit_logs (
   id          uuid primary key default gen_random_uuid(),
   actor_id    uuid,
   action      text not null,
@@ -152,7 +152,7 @@ create table audit_logs (
   created_at  timestamptz not null default now()
 );
 
-create table notifications (
+CREATE TABLE IF NOT EXISTS notifications (
   id          uuid primary key default gen_random_uuid(),
   recipient_id uuid not null references profiles(id),
   channel     text not null,
