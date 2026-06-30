@@ -5,7 +5,7 @@
 // Tanpa dependency ikon eksternal — ikon SVG inline agar pasti jalan.
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import { getNav } from '@ava/ui/src/nav';
+import { getNav } from '@ava/ui';
 
 // Menu yang muncul di bar bawah (mobile: maksimal ~5 agar tetap terbaca).
 const PRIMARY = ['beranda', 'catat', 'hasil', 'konsultasi', 'akun'];

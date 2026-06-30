@@ -4,3 +4,4 @@
 export * from './types.js';
 export * from './evaluate.js';
 export * from './fhir.js';
+export * from './knowledge.js';
