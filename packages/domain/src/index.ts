@@ -9,3 +9,6 @@ export * from './wellness/index.js';
 export * from './caregiver/index.js';
 export * from './notify/index.js';
 export * from './billing/index.js';
+export * from './consult/index.js';
+export * from './marketplace/index.js';
+export * from './corporate/index.js';
