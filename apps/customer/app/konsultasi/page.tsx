@@ -45,6 +45,12 @@ export default async function Konsultasi() {
                   {c.status === 'confirmed' && c.joinUrl && (
                     <a className="join" href={c.joinUrl} target="_blank" rel="noreferrer">Masuk ruang konsultasi →</a>
                   )}
+                  {c.doctorNote && (
+                    <div className="result result--normal" style={{ marginTop: 8 }}>
+                      <span className="result__tag">Catatan dokter</span>
+                      <p className="result__text" style={{ whiteSpace: 'pre-wrap' }}>{c.doctorNote}</p>
+                    </div>
+                  )}
                 </div>
                 <span className={`pill pill--${s.cls}`}>{s.label}</span>
               </div>

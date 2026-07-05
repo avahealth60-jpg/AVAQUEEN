@@ -641,5 +641,27 @@ console.log('\n— Korporat/B2B: pemberi kerja hanya lihat agregat teranonimkan 
   check('Kode baru dapat dipakai bergabung', j2.rows[0]?.emp === E1);
 }
 
+console.log('\n— Profil: customer edit profilnya, TAPI tak bisa eskalasi peran —');
+{
+  // Alice mengisi profil medisnya (boleh).
+  await asUser(U.alice,
+    `update profiles set height_cm=170, weight_kg=65, sex='wanita', birth_date='1995-05-05' where id='${U.alice}'`);
+  const p = await asUser(U.alice, `select height_cm, sex, role from profiles where id='${U.alice}'`);
+  check('Customer bisa menyimpan profil medis', Number(p.rows[0]?.height_cm) === 170 && p.rows[0]?.sex === 'wanita');
+
+  // Alice mencoba menaikkan dirinya jadi ava_admin — trigger membatalkan.
+  await asUser(U.alice, `update profiles set role='ava_admin' where id='${U.alice}'`);
+  const after = await asUser(U.alice, `select role from profiles where id='${U.alice}'`);
+  check('Eskalasi peran oleh customer DIBATALKAN (tetap customer)', after.rows[0]?.role === 'customer');
+
+  // Alice tak bisa mengubah profil Bob (RLS).
+  let cross = false;
+  try {
+    const r = await asUser(U.alice, `update profiles set height_cm=1 where id='${U.bob}' returning id`);
+    cross = r.rows.length === 0; // RLS: 0 baris terpengaruh
+  } catch { cross = true; }
+  check('Customer tak bisa mengubah profil orang lain', cross);
+}
+
 console.log(`\n=== RLS: ${passed} lulus, ${failed} gagal ===`);
 process.exit(failed === 0 ? 0 : 1);
