@@ -13,6 +13,7 @@ import {
   getPlan,
   priceConsultation,
   effectivePlan,
+  computeOrderTotal,
   EDUCATIONAL_DISCLAIMER,
   type ReadingInput,
   type Triage,
@@ -491,6 +492,104 @@ export async function cancelSubscription(): Promise<BillingActionResult> {
   if (error) return { ok: false, message: error.message };
   revalidatePath('/langganan');
   return { ok: true, message: 'Langganan dibatalkan. Berlaku hingga akhir periode.' };
+}
+
+// ── Wellness korporat / B2B (Fase lanjut) ────────────────────────
+export interface EmployerResult { ok: boolean; message: string; }
+
+/** Karyawan bergabung ke program wellness pemberi kerja via kode. */
+export async function joinEmployer(code: string): Promise<EmployerResult> {
+  const { userId } = await getCustomerAuth();
+  if (!userId) return { ok: false, message: 'Silakan masuk dulu.' };
+  const clean = code.trim();
+  if (!clean) return { ok: false, message: 'Masukkan kode dari pemberi kerja.' };
+
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('join_employer', { code: clean });
+  if (error) return { ok: false, message: `Gagal bergabung: ${error.message}` };
+  if (!data) return { ok: false, message: 'Kode pemberi kerja tidak dikenal.' };
+  revalidatePath('/kerja');
+  return { ok: true, message: 'Berhasil bergabung. Hanya data agregat anonim yang dibagikan ke pemberi kerja.' };
+}
+
+export async function leaveEmployer(employerId: string): Promise<EmployerResult> {
+  const { userId } = await getCustomerAuth();
+  if (!userId) return { ok: false, message: 'Silakan masuk dulu.' };
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('employer_enrollments')
+    .update({ status: 'left' })
+    .eq('employer_id', employerId).eq('customer_id', userId);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath('/kerja');
+  return { ok: true, message: 'Kamu keluar dari program pemberi kerja.' };
+}
+
+// ── Marketplace (Fase lanjut) ────────────────────────────────────
+export interface OrderResult { ok: boolean; message: string; }
+export interface CartItem { listingId: string; qty: number; }
+
+/**
+ * Checkout keranjang multi-item: satu order berisi banyak item lintas produk
+ * (bahkan lintas vendor). Harga & stok DIVERIFIKASI server-side dari listing —
+ * klien hanya mengirim listingId + qty. Lalu pembayaran (mock webhook) → 'paid'.
+ */
+export async function checkoutCart(items: CartItem[]): Promise<OrderResult> {
+  const { userId } = await getCustomerAuth();
+  if (!userId) return { ok: false, message: 'Silakan masuk dulu.' };
+  if (!Array.isArray(items) || items.length === 0) return { ok: false, message: 'Keranjang kosong.' };
+
+  // Agregasi qty per listing (klien bisa kirim duplikat).
+  const wanted = new Map<string, number>();
+  for (const it of items) {
+    const q = Math.trunc(Number(it.qty));
+    if (it.listingId && Number.isInteger(q) && q > 0) {
+      wanted.set(it.listingId, (wanted.get(it.listingId) ?? 0) + q);
+    }
+  }
+  if (wanted.size === 0) return { ok: false, message: 'Tidak ada item yang valid.' };
+
+  const supabase = createClient();
+  const ids = [...wanted.keys()];
+  const { data: rows } = await supabase
+    .from('product_listings')
+    .select('id, title, price, stock, vendor_id, status')
+    .in('id', ids).eq('status', 'active');
+  const listings = (rows ?? []) as { id: string; title: string; price: number; stock: number; vendor_id: string }[];
+  if (listings.length !== ids.length) return { ok: false, message: 'Sebagian produk tidak lagi tersedia.' };
+
+  const orderItems: { listing_id: string; vendor_id: string; title: string; qty: number; unit_price: number }[] = [];
+  const lines: { unitPrice: number; qty: number }[] = [];
+  for (const l of listings) {
+    const q = wanted.get(l.id)!;
+    if (l.stock < q) return { ok: false, message: `Stok "${l.title}" tidak mencukupi.` };
+    orderItems.push({ listing_id: l.id, vendor_id: l.vendor_id, title: l.title, qty: q, unit_price: Number(l.price) });
+    lines.push({ unitPrice: Number(l.price), qty: q });
+  }
+  const total = computeOrderTotal(lines);
+
+  const { data: order, error: oErr } = await supabase
+    .from('orders').insert({ customer_id: userId, total, status: 'pending' })
+    .select('id').single();
+  if (oErr || !order) return { ok: false, message: `Gagal membuat order: ${oErr?.message ?? ''}` };
+
+  const { error: iErr } = await supabase.from('order_items')
+    .insert(orderItems.map((oi) => ({ ...oi, order_id: order.id })));
+  if (iErr) return { ok: false, message: `Gagal menambah item: ${iErr.message}` };
+
+  const { data: pay, error: pErr } = await supabase.from('payments').insert({
+    customer_id: userId, purpose: 'order', ref_id: order.id, amount: total,
+    currency: 'IDR', provider: activeProvider().id, status: 'pending',
+  }).select('id').single();
+  if (pErr || !pay) return { ok: false, message: `Gagal membuat tagihan: ${pErr?.message ?? ''}` };
+
+  const { data: ok, error: cErr } = await supabase.rpc('mock_confirm_payment', { p_id: pay.id });
+  if (cErr) return { ok: false, message: `Konfirmasi gagal: ${cErr.message}` };
+  if (!ok) return { ok: false, message: 'Pembayaran tidak dapat dikonfirmasi.' };
+
+  revalidatePath('/toko');
+  const n = orderItems.reduce((s, i) => s + i.qty, 0);
+  return { ok: true, message: `Pesanan (${n} item) diterima & dibayar — Rp${total.toLocaleString('id-ID')}.` };
 }
 
 // ── Konsultasi ───────────────────────────────────────────────────

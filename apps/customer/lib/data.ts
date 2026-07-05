@@ -345,6 +345,29 @@ export async function billingSummary(): Promise<BillingSummary> {
   return { effective: effectivePlan(sub.status, sub.plan, sub.expiresAt), subscription: sub };
 }
 
+// ── Wellness korporat / B2B (Fase lanjut) ────────────────────────
+export interface EmployerMembershipView {
+  employerId: string;
+  employerName: string | null;
+  status: string;
+  joinedAt: string;
+}
+
+export async function myEmployers(): Promise<EmployerMembershipView[]> {
+  const id = await myId();
+  if (!id) return [];
+  const supabase = createClient();
+  const { data } = await supabase
+    .from('employer_enrollments')
+    .select('employer_id, status, joined_at, organizations(name)')
+    .eq('customer_id', id).eq('status', 'active')
+    .order('joined_at', { ascending: false });
+  return ((data ?? []) as any[]).map((e) => {
+    const org = Array.isArray(e.organizations) ? e.organizations[0] : e.organizations;
+    return { employerId: e.employer_id, employerName: org?.name ?? null, status: e.status, joinedAt: e.joined_at };
+  });
+}
+
 /** Nudge wellness "hidup" (dihitung, tidak disimpan) dari program aktif. */
 export async function liveWellnessNudges() {
   const cards = await wellnessDashboard();

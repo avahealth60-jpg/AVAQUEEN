@@ -160,6 +160,44 @@ export default async function Home() {
               : <span aria-hidden style={{ fontSize: 22, color: 'var(--ava-color-trust-600)' }}>→</span>}
           </Link>
 
+          <Link
+            href="/toko"
+            className="card"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 12, textDecoration: 'none', marginTop: 'var(--ava-space-3)',
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 600, color: 'var(--ava-color-ink-900)' }}>
+                Toko alat terverifikasi
+              </div>
+              <div style={{ fontSize: 14, color: 'var(--ava-color-ink-500)' }}>
+                Beli alat ber-badge AVA Verified
+              </div>
+            </div>
+            <span aria-hidden style={{ fontSize: 22, color: 'var(--ava-color-trust-600)' }}>→</span>
+          </Link>
+
+          <Link
+            href="/kerja"
+            className="card"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 12, textDecoration: 'none', marginTop: 'var(--ava-space-3)',
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 600, color: 'var(--ava-color-ink-900)' }}>
+                Wellness dari kantor
+              </div>
+              <div style={{ fontSize: 14, color: 'var(--ava-color-ink-500)' }}>
+                Gabung program pemberi kerja — data tetap privat
+              </div>
+            </div>
+            <span aria-hidden style={{ fontSize: 22, color: 'var(--ava-color-trust-600)' }}>→</span>
+          </Link>
+
           <History />
         </>
       )}
