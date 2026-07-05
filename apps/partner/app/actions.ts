@@ -6,8 +6,18 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '../lib/supabase/server';
 import { getPartnerAuth } from '../lib/auth';
+import { assertConsultTransition, type ConsultStatus } from '@ava/domain';
 
 export interface ActionResult { ok: boolean; message: string; }
+
+/** Ambil status konsultasi saat ini (RLS: hanya yang ditugaskan ke dokter). */
+async function consultStatus(
+  supabase: ReturnType<typeof createClient>,
+  id: string,
+): Promise<ConsultStatus | null> {
+  const { data } = await supabase.from('consultations').select('status').eq('id', id).maybeSingle();
+  return (data?.status as ConsultStatus | undefined) ?? null;
+}
 
 /** Vendor mendaftarkan alat baru ke armadanya. */
 export async function registerDevice(
@@ -90,6 +100,65 @@ export async function submitCalibration(
   };
 }
 
+// ── Marketplace (sisi vendor) ────────────────────────────────────
+/** Vendor memasang listing alat ke etalase. Verifikasi "AVA Verified"
+ *  diturunkan otomatis dari badge aktif (fungsi verified_listing_ids). */
+export async function publishListing(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const auth = await getPartnerAuth();
+  if (auth.role !== 'vendor' || !auth.org) {
+    return { ok: false, message: 'Hanya vendor dengan organisasi yang dapat memasang listing.' };
+  }
+  const modelId = String(formData.get('modelId') ?? '').trim();
+  const title = String(formData.get('title') ?? '').trim();
+  const price = Number(formData.get('price'));
+  const stock = Math.trunc(Number(formData.get('stock')));
+  const description = String(formData.get('description') ?? '').trim();
+
+  if (!modelId || !title) return { ok: false, message: 'Model dan judul wajib diisi.' };
+  if (!Number.isFinite(price) || price < 0) return { ok: false, message: 'Harga tidak valid.' };
+  if (!Number.isInteger(stock) || stock < 0) return { ok: false, message: 'Stok tidak valid.' };
+
+  const supabase = createClient();
+  const { error } = await supabase.from('product_listings').insert({
+    vendor_id: auth.org.id, // RLS "vendor manages own listings" memverifikasi keanggotaan
+    model_id: modelId,
+    title,
+    description: description || null,
+    price,
+    stock,
+    status: 'active',
+  });
+  if (error) return { ok: false, message: `Gagal memasang listing: ${error.message}` };
+  revalidatePath('/');
+  return { ok: true, message: `Listing "${title}" tayang di toko.` };
+}
+
+// ── Wellness korporat (sisi pemberi kerja) ───────────────────────
+export interface JoinCodeResult { ok: boolean; message: string; code?: string | null; }
+
+/** Admin pemberi kerja mengatur/mengacak kode gabung karyawan. */
+export async function setJoinCode(
+  _prev: JoinCodeResult | null,
+  formData: FormData,
+): Promise<JoinCodeResult> {
+  const auth = await getPartnerAuth();
+  if (auth.org?.kind !== 'employer') {
+    return { ok: false, message: 'Hanya admin pemberi kerja yang dapat mengatur kode.' };
+  }
+  const code = String(formData.get('code') ?? '').trim(); // kosong → diacak fungsi
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('set_employer_join_code', {
+    p_employer: auth.org.id, p_code: code,
+  });
+  if (error) return { ok: false, message: `Gagal: ${error.message}` };
+  if (!data) return { ok: false, message: 'Tidak berwenang mengatur kode.' };
+  revalidatePath('/');
+  return { ok: true, message: 'Kode gabung diperbarui.', code: data as string };
+}
+
 // ── Konsultasi (sisi dokter) ─────────────────────────────────────
 export async function confirmConsultation(
   _prev: ActionResult | null,
@@ -104,6 +173,11 @@ export async function confirmConsultation(
 
   // RLS "doctor updates assigned consultation" membatasi ke doctor_id = auth.uid().
   const supabase = createClient();
+  const cur = await consultStatus(supabase, id);
+  if (!cur) return { ok: false, message: 'Konsultasi tidak ditemukan.' };
+  try { assertConsultTransition(cur, 'confirmed'); }
+  catch (e) { return { ok: false, message: e instanceof Error ? e.message : String(e) }; }
+
   const { error } = await supabase.from('consultations')
     .update({
       status: 'confirmed',
@@ -117,10 +191,31 @@ export async function confirmConsultation(
   return { ok: true, message: 'Konsultasi dikonfirmasi.' };
 }
 
+/** Dokter menolak permintaan konsultasi (requested/confirmed → cancelled). */
+export async function declineConsultation(id: string): Promise<ActionResult> {
+  const auth = await getPartnerAuth();
+  if (auth.role !== 'doctor') return { ok: false, message: 'Hanya dokter yang dapat menolak.' };
+  const supabase = createClient();
+  const cur = await consultStatus(supabase, id);
+  if (!cur) return { ok: false, message: 'Konsultasi tidak ditemukan.' };
+  try { assertConsultTransition(cur, 'cancelled'); }
+  catch (e) { return { ok: false, message: e instanceof Error ? e.message : String(e) }; }
+
+  const { error } = await supabase.from('consultations').update({ status: 'cancelled' }).eq('id', id);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath('/');
+  return { ok: true, message: 'Permintaan ditolak.' };
+}
+
 export async function completeConsultation(id: string): Promise<ActionResult> {
   const auth = await getPartnerAuth();
   if (auth.role !== 'doctor') return { ok: false, message: 'Hanya dokter yang dapat menyelesaikan.' };
   const supabase = createClient();
+  const cur = await consultStatus(supabase, id);
+  if (!cur) return { ok: false, message: 'Konsultasi tidak ditemukan.' };
+  try { assertConsultTransition(cur, 'completed'); }
+  catch (e) { return { ok: false, message: e instanceof Error ? e.message : String(e) }; }
+
   const { error } = await supabase.from('consultations').update({ status: 'completed' }).eq('id', id);
   if (error) return { ok: false, message: error.message };
   revalidatePath('/');

@@ -1,5 +1,6 @@
 // apps/customer/lib/consult.ts — data konsultasi sisi masyarakat (RLS).
 import { createClient } from './supabase/server';
+import { getCustomerAuth } from './auth';
 import { metricLabel } from './catalog';
 
 export interface DoctorOption { id: string; name: string; }
@@ -12,7 +13,13 @@ export async function doctors(): Promise<DoctorOption[]> {
 export interface ReadingOption { id: string; label: string; display: string; takenAt: string; }
 export async function shareableReadings(): Promise<ReadingOption[]> {
   const supabase = createClient();
-  const { data } = await supabase.from('health_readings').select('id, reading_type, value, taken_at').order('taken_at', { ascending: false }).limit(20);
+  // Hanya reading MILIK SENDIRI (sejak Fase C, RLS bisa mengizinkan pendamping
+  // membaca reading pasien — jangan sampai ikut tampil di daftar berbagi).
+  const { userId } = await getCustomerAuth();
+  if (!userId) return [];
+  const { data } = await supabase.from('health_readings').select('id, reading_type, value, taken_at')
+    .eq('customer_id', userId)
+    .order('taken_at', { ascending: false }).limit(20);
   return ((data ?? []) as { id: string; reading_type: string; value: Record<string, unknown>; taken_at: string }[]).map((r) => ({
     id: r.id,
     label: metricLabel(r.reading_type),

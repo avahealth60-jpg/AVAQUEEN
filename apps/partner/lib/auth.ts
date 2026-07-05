@@ -13,7 +13,7 @@ export function authConfigured(): boolean {
 
 export const PARTNER_ROLES: UserRole[] = ['vendor', 'lab', 'faskes_admin', 'doctor'];
 
-export interface PartnerOrg { id: string; name: string; kind: 'vendor' | 'lab' | 'faskes'; }
+export interface PartnerOrg { id: string; name: string; kind: 'vendor' | 'lab' | 'faskes' | 'employer'; }
 
 export interface PartnerAuth {
   configured: boolean;

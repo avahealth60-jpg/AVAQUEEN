@@ -2,7 +2,7 @@
 import React from 'react';
 import { doctorConsultations, doctorEarnings } from '../lib/consult';
 import { PageHead, Empty } from './widgets';
-import { ConfirmForm, CompleteButton } from './ConsultActions';
+import { ConfirmForm, CompleteButton, DeclineButton } from './ConsultActions';
 
 const rupiah = (n: number) => 'Rp ' + Math.round(n).toLocaleString('id-ID');
 const STATUS: Record<string, [string, string]> = {
@@ -50,7 +50,12 @@ export async function DoctorDashboard({ name }: { name: string | null }) {
                     </div>
                   ) : <div className="hint" style={{ marginBottom: 8 }}>Tidak ada hasil dibagikan.</div>}
 
-                  {c.status === 'requested' && <ConfirmForm id={c.id} />}
+                  {c.status === 'requested' && (
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                      <ConfirmForm id={c.id} />
+                      <DeclineButton id={c.id} />
+                    </div>
+                  )}
                   {c.status === 'confirmed' && (
                     <div>
                       {c.scheduledAt && <div className="hint">Jadwal: {new Date(c.scheduledAt).toLocaleString('id-ID')}</div>}

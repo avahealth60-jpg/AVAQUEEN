@@ -322,5 +322,324 @@ console.log('\n— Direktori dokter: masyarakat boleh melihat profil dokter —'
   check('Carol TIDAK membaca profil non-pasien (Bob)', notmine.rows.length === 0);
 }
 
+console.log('\n— Wearable: koneksi terisolasi per pemilik (data biometrik sensitif) —');
+{
+  // Alice menautkan Health Connect; Bob menautkan Fitbit.
+  await asUser(U.alice,
+    `insert into wearable_connections(customer_id, provider) values ('${U.alice}','health_connect')`);
+  await asUser(U.bob,
+    `insert into wearable_connections(customer_id, provider) values ('${U.bob}','fitbit')`);
+
+  const mine = await asUser(U.alice, 'select provider from wearable_connections');
+  check('Alice hanya melihat koneksi wearable-nya sendiri',
+    mine.rows.length === 1 && mine.rows[0].provider === 'health_connect');
+
+  // Alice tidak bisa mengintip koneksi Bob.
+  const peek = await asUser(U.alice,
+    `select id from wearable_connections where customer_id='${U.bob}'`);
+  check('Alice TIDAK melihat koneksi wearable Bob', peek.rows.length === 0);
+
+  // Alice tidak bisa menautkan koneksi ATAS NAMA Bob (WITH CHECK).
+  let forged = false;
+  try {
+    await asUser(U.alice,
+      `insert into wearable_connections(customer_id, provider) values ('${U.bob}','garmin')`);
+  } catch { forged = true; }
+  check('Alice TIDAK bisa membuat koneksi atas nama Bob (WITH CHECK)', forged);
+
+  // Provider tak dikenal ditolak oleh CHECK constraint.
+  let badProvider = false;
+  try {
+    await asUser(U.alice,
+      `insert into wearable_connections(customer_id, provider) values ('${U.alice}','random_watch')`);
+  } catch { badProvider = true; }
+  check('Provider tak dikenal ditolak (CHECK constraint)', badProvider);
+
+  // Anon tidak melihat koneksi wearable siapa pun (0 baris ATAU akses ditolak —
+  // keduanya menjamin isolasi; anon memang tak diberi grant ke tabel ini).
+  let anonBlocked = false;
+  try {
+    const anon = await asAnon('select id from wearable_connections');
+    anonBlocked = anon.rows.length === 0;
+  } catch { anonBlocked = true; }
+  check('Anon TIDAK melihat koneksi wearable', anonBlocked);
+}
+
+console.log('\n— Wellness: keikutsertaan & check-in terisolasi per pemilik —');
+{
+  // Alice & Bob ikut program.
+  await asUser(U.alice,
+    `insert into wellness_enrollments(customer_id, program_code) values ('${U.alice}','langkah_harian')`);
+  await asUser(U.bob,
+    `insert into wellness_enrollments(customer_id, program_code) values ('${U.bob}','tidur_cukup')`);
+
+  const mine = await asUser(U.alice, 'select program_code from wellness_enrollments');
+  check('Alice hanya melihat keikutsertaannya sendiri',
+    mine.rows.length === 1 && mine.rows[0].program_code === 'langkah_harian');
+
+  const peek = await asUser(U.alice,
+    `select id from wellness_enrollments where customer_id='${U.bob}'`);
+  check('Alice TIDAK melihat keikutsertaan Bob', peek.rows.length === 0);
+
+  // Alice tidak bisa mendaftar atas nama Bob (WITH CHECK).
+  let forged = false;
+  try {
+    await asUser(U.alice,
+      `insert into wellness_enrollments(customer_id, program_code) values ('${U.bob}','gerak_aktif')`);
+  } catch { forged = true; }
+  check('Alice TIDAK bisa mendaftar program atas nama Bob (WITH CHECK)', forged);
+
+  // Status di luar daftar ditolak oleh CHECK.
+  let badStatus = false;
+  try {
+    await asUser(U.alice,
+      `insert into wellness_enrollments(customer_id, program_code, status) values ('${U.alice}','hidrasi','juara')`);
+  } catch { badStatus = true; }
+  check('Status enrollment tak dikenal ditolak (CHECK)', badStatus);
+
+  // Check-in: Alice mencatat hidrasi; Bob tak bisa melihatnya.
+  await asUser(U.alice,
+    `insert into wellness_checkins(customer_id, program_code, metric, value) values ('${U.alice}','hidrasi','hydration_ml',1800)`);
+  const bobSees = await asUser(U.bob,
+    `select id from wellness_checkins where customer_id='${U.alice}'`);
+  check('Bob TIDAK melihat check-in Alice', bobSees.rows.length === 0);
+
+  // Nilai negatif ditolak (CHECK value >= 0).
+  let badVal = false;
+  try {
+    await asUser(U.alice,
+      `insert into wellness_checkins(customer_id, program_code, metric, value, day) values ('${U.alice}','hidrasi','hydration_ml',-5,'2026-07-04')`);
+  } catch { badVal = true; }
+  check('Check-in nilai negatif ditolak (CHECK value >= 0)', badVal);
+}
+
+console.log('\n— Pendamping: akses baca terkendali scope + dapat dicabut —');
+{
+  // Alice mengundang pendamping dengan scope readings SAJA (bukan wellness).
+  await asUser(U.alice,
+    `insert into caregiver_links(patient_id, invite_token, scopes)
+     values ('${U.alice}', 'tok-alice-1', array['readings']::text[])`);
+
+  // Sebelum diklaim (pending): Bob TIDAK melihat reading Alice lewat jalur pendamping.
+  const before = await asUser(U.bob,
+    `select id from health_readings where customer_id='${U.alice}'`);
+  check('Pendamping (pending) belum melihat reading pasien', before.rows.length === 0);
+
+  // Bob tak bisa klaim token milik dirinya? (self-link dilarang) — di sini token
+  // milik Alice, Bob berbeda, jadi klaim SAH.
+  const claim = await asUser(U.bob, `select claim_caregiver_invite('tok-alice-1') as id`);
+  check('Bob berhasil klaim undangan (jadi pendamping aktif)', claim.rows[0]?.id != null);
+
+  // Kini Bob (pendamping aktif, scope readings) MEMBACA reading Alice.
+  const seen = await asUser(U.bob,
+    `select id from health_readings where customer_id='${U.alice}'`);
+  check('Pendamping aktif membaca reading pasien (scope readings)', seen.rows.length >= 1);
+
+  // Tapi scope wellness TIDAK diberikan → Bob tak melihat wellness Alice.
+  const noWell = await asUser(U.bob,
+    `select id from wellness_enrollments where customer_id='${U.alice}'`);
+  check('Pendamping tanpa scope wellness TIDAK melihat wellness pasien', noWell.rows.length === 0);
+
+  // Carol (bukan pendamping Alice) tetap tak melihat reading Alice lewat jalur ini.
+  const carol = await asUser(U.victor, // vendor, jelas bukan pendamping
+    `select id from health_readings where customer_id='${U.alice}'`);
+  check('Non-pendamping tidak melihat reading pasien', carol.rows.length === 0);
+
+  // Pendamping hanya BACA — tak bisa menulis reading atas nama pasien.
+  let cgWrite = false;
+  try {
+    await asUser(U.bob,
+      `insert into health_readings(customer_id, reading_type, value) values ('${U.alice}','spo2','{"v":95}')`);
+  } catch { cgWrite = true; }
+  check('Pendamping TIDAK bisa menulis reading atas nama pasien', cgWrite);
+
+  // Token tak valid → klaim mengembalikan null (tidak melempar).
+  const badClaim = await asUser(U.carol, `select claim_caregiver_invite('token-ngawur') as id`);
+  check('Klaim token tak valid mengembalikan null', badClaim.rows[0]?.id == null);
+
+  // Pasien mencabut → akses pendamping putus seketika.
+  await asUser(U.alice,
+    `update caregiver_links set status='revoked', revoked_at=now() where invite_token='tok-alice-1'`);
+  const afterRevoke = await asUser(U.bob,
+    `select id from health_readings where customer_id='${U.alice}'`);
+  check('Setelah dicabut, pendamping TIDAK lagi melihat reading pasien', afterRevoke.rows.length === 0);
+
+  // Anon tak melihat tautan pendamping.
+  let anonCg = false;
+  try {
+    const a = await asAnon('select id from caregiver_links');
+    anonCg = a.rows.length === 0;
+  } catch { anonCg = true; }
+  check('Anon TIDAK melihat tautan pendamping', anonCg);
+}
+
+console.log('\n— Billing: langganan tak bisa di-self-grant; aktivasi via konfirmasi bayar —');
+{
+  // Alice tak bisa langsung menulis langganan premium (tak ada write policy).
+  let selfGrant = false;
+  try {
+    await asUser(U.alice,
+      `insert into subscriptions(customer_id, plan, status) values ('${U.alice}','premium','active')`);
+  } catch { selfGrant = true; }
+  check('Pelanggan TIDAK bisa self-grant langganan premium', selfGrant);
+
+  // Alice membuat pembayaran (pending) untuk dirinya — boleh.
+  const pay = await asUser(U.alice,
+    `insert into payments(customer_id, purpose, amount) values ('${U.alice}','subscription',49000) returning id`);
+  check('Pelanggan bisa membuat pembayaran sendiri (pending)', pay.rows.length === 1);
+  const payId = pay.rows[0].id;
+
+  // Alice tak bisa membuat pembayaran atas nama Bob (WITH CHECK).
+  let forgedPay = false;
+  try {
+    await asUser(U.alice,
+      `insert into payments(customer_id, purpose, amount) values ('${U.bob}','subscription',49000)`);
+  } catch { forgedPay = true; }
+  check('Pelanggan TIDAK bisa membuat pembayaran atas nama orang lain', forgedPay);
+
+  // Alice tak bisa membuat pembayaran langsung 'paid' (WITH CHECK status='pending').
+  let paidInsert = false;
+  try {
+    await asUser(U.alice,
+      `insert into payments(customer_id, purpose, amount, status) values ('${U.alice}','subscription',1,'paid')`);
+  } catch { paidInsert = true; }
+  check('Pelanggan TIDAK bisa menyisipkan pembayaran langsung paid', paidInsert);
+
+  // Bob tak bisa mengonfirmasi pembayaran Alice (fungsi terikat pemilik).
+  const bobConfirm = await asUser(U.bob, `select public.mock_confirm_payment('${payId}') as ok`);
+  check('Pembayaran orang lain tidak bisa dikonfirmasi', bobConfirm.rows[0]?.ok === false);
+
+  // Alice mengonfirmasi pembayarannya → langganan premium aktif.
+  const okConfirm = await asUser(U.alice, `select public.mock_confirm_payment('${payId}') as ok`);
+  check('Konfirmasi pembayaran sendiri berhasil', okConfirm.rows[0]?.ok === true);
+  const sub = await asUser(U.alice, `select plan, status from subscriptions where customer_id='${U.alice}'`);
+  check('Langganan premium aktif setelah pembayaran', sub.rows[0]?.plan === 'premium' && sub.rows[0]?.status === 'active');
+
+  // Bob tak melihat langganan/pembayaran Alice.
+  const bobSubs = await asUser(U.bob, `select id from subscriptions where customer_id='${U.alice}'`);
+  check('Pelanggan lain tidak melihat langganan Alice', bobSubs.rows.length === 0);
+  const bobPays = await asUser(U.bob, `select id from payments where customer_id='${U.alice}'`);
+  check('Pelanggan lain tidak melihat pembayaran Alice', bobPays.rows.length === 0);
+}
+
+console.log('\n— Marketplace: etalase publik, verifikasi dari badge, order terisolasi —');
+{
+  // Vendor V1 (Vance) & V2 (Victor) memasang listing untuk model Tensimeter A.
+  // Device V1 sudah punya badge aktif (dari alur wedge di atas); V2 tidak.
+  await asUser(U.vance,
+    `insert into product_listings(id, vendor_id, model_id, title, price, stock)
+     values ('f1111111-0000-0000-0000-000000000001','${ORG.v1}','bbbbbbbb-0000-0000-0000-000000000001','Tensimeter A (V1)',250000,5)`);
+  await asUser(U.victor,
+    `insert into product_listings(id, vendor_id, model_id, title, price, stock)
+     values ('f2222222-0000-0000-0000-000000000002','${ORG.v2}','bbbbbbbb-0000-0000-0000-000000000001','Tensimeter A (V2)',240000,5)`);
+
+  // Publik (anon) melihat listing aktif.
+  const pub = await asAnon('select id from product_listings');
+  check('Publik melihat listing aktif', pub.rows.length >= 2);
+
+  // Hanya listing V1 yang terverifikasi (punya badge aktif).
+  const ver = await asAnon('select verified_listing_ids as id from verified_listing_ids()');
+  const verIds = ver.rows.map((r) => r.id);
+  check('Listing V1 terverifikasi (badge aktif)', verIds.includes('f1111111-0000-0000-0000-000000000001'));
+  check('Listing V2 TIDAK terverifikasi (tanpa badge)', !verIds.includes('f2222222-0000-0000-0000-000000000002'));
+
+  // Vendor tak bisa memasang listing atas nama vendor lain (WITH CHECK keanggotaan).
+  let forgedListing = false;
+  try {
+    await asUser(U.victor,
+      `insert into product_listings(vendor_id, model_id, title, price) values ('${ORG.v1}','bbbbbbbb-0000-0000-0000-000000000001','Palsu',1)`);
+  } catch { forgedListing = true; }
+  check('Vendor TIDAK bisa memasang listing atas nama vendor lain', forgedListing);
+
+  // Alice memesan listing V1 (order + item).
+  await asUser(U.alice,
+    `insert into orders(id, customer_id, total) values ('0dd00000-0000-0000-0000-000000000001','${U.alice}',250000)`);
+  await asUser(U.alice,
+    `insert into order_items(order_id, listing_id, vendor_id, title, qty, unit_price)
+     values ('0dd00000-0000-0000-0000-000000000001','f1111111-0000-0000-0000-000000000001','${ORG.v1}','Tensimeter A (V1)',1,250000)`);
+  const myOrder = await asUser(U.alice, 'select id from orders');
+  check('Pelanggan melihat ordernya sendiri', myOrder.rows.length === 1);
+
+  // Bob tak melihat order Alice.
+  const bobOrder = await asUser(U.bob, `select id from orders where customer_id='${U.alice}'`);
+  check('Pelanggan lain tidak melihat order Alice', bobOrder.rows.length === 0);
+
+  // Vendor V1 MELIHAT order yang memuat itemnya; Vendor V2 tidak.
+  const v1sees = await asUser(U.vance, 'select id from orders');
+  check('Vendor V1 melihat order yang memuat itemnya', v1sees.rows.some((r) => r.id === '0dd00000-0000-0000-0000-000000000001'));
+  const v2sees = await asUser(U.victor, `select id from orders where id='0dd00000-0000-0000-0000-000000000001'`);
+  check('Vendor V2 TIDAK melihat order yang bukan itemnya', v2sees.rows.length === 0);
+
+  // Alice bayar order via konfirmasi (mock webhook) → order 'paid'.
+  const opay = await asUser(U.alice,
+    `insert into payments(customer_id, purpose, ref_id, amount) values ('${U.alice}','order','0dd00000-0000-0000-0000-000000000001',250000) returning id`);
+  const oconf = await asUser(U.alice, `select public.mock_confirm_payment('${opay.rows[0].id}') as ok`);
+  check('Konfirmasi pembayaran order berhasil', oconf.rows[0]?.ok === true);
+  const paidOrder = await asUser(U.alice, `select status from orders where id='0dd00000-0000-0000-0000-000000000001'`);
+  check('Order menjadi paid setelah pembayaran', paidOrder.rows[0]?.status === 'paid');
+}
+
+console.log('\n— Korporat/B2B: pemberi kerja hanya lihat agregat teranonimkan —');
+{
+  const E1 = 'e1100000-0000-0000-0000-000000000001';
+  const E2 = 'e2200000-0000-0000-0000-000000000002';
+  const emp = (i) => `ee000000-0000-0000-0000-0000000000${10 + i}`; // 11..17
+
+  // Setup superuser (bypass RLS): 2 pemberi kerja, Victor sbg admin keduanya,
+  // 5 karyawan di E1 + 2 di E2.
+  let seed = `
+    insert into organizations(id,name,kind,join_code) values
+      ('${E1}','PT Sehat','employer','JOIN-E1'),
+      ('${E2}','CV Kecil','employer','JOIN-E2');
+    insert into organization_members(organization_id, profile_id) values
+      ('${E1}','${U.victor}'), ('${E2}','${U.victor}');
+  `;
+  for (let i = 1; i <= 7; i++) seed += `insert into profiles(id,role,full_name) values ('${emp(i)}','customer','Emp${i}');\n`;
+  for (let i = 1; i <= 5; i++) seed += `insert into employer_enrollments(employer_id,customer_id) values ('${E1}','${emp(i)}');\n`;
+  seed += `insert into employer_enrollments(employer_id,customer_id) values ('${E2}','${emp(6)}'),('${E2}','${emp(7)}');\n`;
+  await db.exec(seed);
+
+  // Alice bergabung via kode → jadi karyawan E1.
+  const join = await asUser(U.alice, `select public.join_employer('JOIN-E1') as emp`);
+  check('Karyawan bergabung via kode pemberi kerja', join.rows[0]?.emp === E1);
+
+  // Karyawan hanya melihat keikutsertaannya sendiri (bukan daftar rekan).
+  const mine = await asUser(U.alice, 'select employer_id from employer_enrollments');
+  check('Karyawan hanya melihat keikutsertaannya sendiri',
+    mine.rows.length === 1 && mine.rows[0].employer_id === E1);
+
+  // Admin pemberi kerja (Victor) melihat agregat E1 (>=5 peserta → tak disembunyikan).
+  const s1 = await asUser(U.victor,
+    `select participants, suppressed, active_wellness from public.employer_wellness_summary('${E1}')`);
+  check('Agregat E1 tidak disembunyikan (peserta cukup)', s1.rows[0]?.suppressed === false);
+  check('Agregat E1 hitung peserta (5 seed + Alice = 6)', Number(s1.rows[0]?.participants) === 6);
+  check('Agregat E1 hitung peserta wellness aktif (Alice)', Number(s1.rows[0]?.active_wellness) === 1);
+
+  // FIREWALL PRIVASI: admin pemberi kerja TIDAK bisa baca data kesehatan individu.
+  const h = await asUser(U.victor, `select id from health_readings where customer_id='${U.alice}'`);
+  check('Pemberi kerja TIDAK melihat reading kesehatan karyawan', h.rows.length === 0);
+  const w = await asUser(U.victor, `select id from wellness_enrollments where customer_id='${U.alice}'`);
+  check('Pemberi kerja TIDAK melihat wellness individu karyawan', w.rows.length === 0);
+
+  // k-anonimitas: E2 hanya 2 peserta → disembunyikan.
+  const s2 = await asUser(U.victor,
+    `select participants, suppressed, active_wellness from public.employer_wellness_summary('${E2}')`);
+  check('Agregat E2 disembunyikan (peserta < K=5)',
+    s2.rows[0]?.suppressed === true && s2.rows[0]?.active_wellness === null);
+
+  // Non-admin (Bob) tak mendapat agregat sama sekali.
+  const s3 = await asUser(U.bob, `select participants from public.employer_wellness_summary('${E1}')`);
+  check('Non-admin tidak mendapat agregat pemberi kerja', s3.rows.length === 0);
+
+  // Kode gabung: admin (Victor) mengatur; non-admin (Bob) ditolak.
+  const setC = await asUser(U.victor, `select public.set_employer_join_code('${E1}','Tim-X 01') as code`);
+  check('Admin pemberi kerja mengatur kode gabung (dinormalkan)', setC.rows[0]?.code === 'TIMX01');
+  const bobSet = await asUser(U.bob, `select public.set_employer_join_code('${E1}','curang') as code`);
+  check('Non-admin tidak bisa mengatur kode gabung', bobSet.rows[0]?.code == null);
+  // Karyawan baru bergabung dgn kode baru.
+  const j2 = await asUser(U.carol, `select public.join_employer('TIMX01') as emp`);
+  check('Kode baru dapat dipakai bergabung', j2.rows[0]?.emp === E1);
+}
+
 console.log(`\n=== RLS: ${passed} lulus, ${failed} gagal ===`);
 process.exit(failed === 0 ? 0 : 1);

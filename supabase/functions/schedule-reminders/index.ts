@@ -1,6 +1,19 @@
 // schedule-reminders — cron harian. Ingatkan kalibrasi jatuh tempo,
-// tandai badge kedaluwarsa. Dijadwalkan via pg_cron / Supabase schedule.
+// tandai badge kedaluwarsa, dan kirim alert pendamping utk hasil pasien flagged.
+// Dijadwalkan via pg_cron / Supabase schedule.
 import { serviceClient } from '../_shared/supabase.ts';
+import { caregiverAlertFor } from '../_shared/domain.ts';
+
+// Label ringkas per jenis reading klinis (untuk teks alert pendamping).
+const READING_LABEL: Record<string, string> = {
+  spo2: 'Saturasi oksigen (SpO₂)',
+  heart_rate: 'Detak jantung',
+  temperature: 'Suhu tubuh',
+  bp_systolic: 'Tekanan darah sistolik',
+  bp_diastolic: 'Tekanan darah diastolik',
+  glucose_fasting: 'Gula darah puasa',
+  blood_pressure: 'Tekanan darah',
+};
 
 Deno.serve(async () => {
   const db = serviceClient();
@@ -35,8 +48,67 @@ Deno.serve(async () => {
     }
   }
 
+  // 3) Alert pendamping: hasil pasien flagged (triase != normal) dalam 2 hari
+  //    → beri tahu pendamping AKTIF berscope 'readings'. Deduplikasi per (recipient,title).
+  const since = new Date(Date.now() - 2 * 86_400_000).toISOString();
+  const { data: flagged } = await db
+    .from('analysis_results')
+    .select('triage, created_at, health_readings(customer_id, reading_type, value, unit)')
+    .neq('triage', 'normal')
+    .gte('created_at', since);
+
+  let alerts = 0;
+  for (const a of flagged ?? []) {
+    // deno-lint-ignore no-explicit-any
+    const r = (a as any).health_readings;
+    if (!r) continue;
+
+    // Pendamping aktif dengan scope 'readings' untuk pasien ini.
+    const { data: links } = await db
+      .from('caregiver_links')
+      .select('caregiver_id, scopes, status')
+      .eq('patient_id', r.customer_id).eq('status', 'active');
+    const caregivers = (links ?? []).filter((l) => (l.scopes ?? []).includes('readings') && l.caregiver_id);
+    if (caregivers.length === 0) continue;
+
+    // Nama pasien (service role boleh baca profil).
+    const { data: prof } = await db
+      .from('profiles').select('full_name').eq('id', r.customer_id).maybeSingle();
+    const patientName = prof?.full_name ?? 'Pasien';
+
+    const display = r.reading_type === 'blood_pressure'
+      ? `${r.value?.systolic ?? '?'}/${r.value?.diastolic ?? '?'}`
+      : String(r.value?.value ?? r.value?.v ?? '?');
+    const alert = caregiverAlertFor({
+      patientName,
+      label: READING_LABEL[r.reading_type] ?? r.reading_type,
+      display,
+      unit: r.unit ?? '',
+      // deno-lint-ignore no-explicit-any
+      triage: (a as any).triage,
+    });
+    if (!alert) continue;
+
+    for (const cg of caregivers) {
+      // Dedup: lewati bila sudah ada notifikasi judul sama utk penerima ini baru-baru ini.
+      const { data: dup } = await db
+        .from('notifications')
+        .select('id').eq('recipient_id', cg.caregiver_id).eq('title', alert.title)
+        .gte('created_at', since).limit(1);
+      if (dup && dup.length > 0) continue;
+
+      await db.from('notifications').insert({
+        recipient_id: cg.caregiver_id,
+        channel: 'push',
+        title: alert.title,
+        body: alert.body,
+      });
+      alerts++;
+    }
+  }
+
   return new Response(
-    JSON.stringify({ expired_badges: expired?.length ?? 0, reminders_sent: reminders }),
+    JSON.stringify({ expired_badges: expired?.length ?? 0, reminders_sent: reminders, caregiver_alerts: alerts }),
     { headers: { 'Content-Type': 'application/json' } },
   );
 });
