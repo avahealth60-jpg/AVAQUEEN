@@ -4,3 +4,8 @@ export * from './qc.js';
 export * from './calibration.js';
 export * from './analyze.js';
 export * from './pemeriksaan/index.js';
+export * from './wearable/index.js';
+export * from './wellness/index.js';
+export * from './caregiver/index.js';
+export * from './notify/index.js';
+export * from './billing/index.js';
