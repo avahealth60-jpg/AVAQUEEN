@@ -2,28 +2,30 @@
    Palet slate dingin & klinis · rail gelap seperti panel instrumen ·
    satu aksen hijau-kepercayaan · monospace untuk serial/NIE/tanggal. */
 
+/* Var lokal dijembatani ke token bersama @ava/ui → tema gelap otomatis.
+   Rail (panel instrumen) sengaja tetap gelap di kedua tema. */
 :root {
-  --ink:        #0F172A;
-  --ink-2:      #334155;
-  --muted:      #64748B;
-  --line:       #E2E8F0;
-  --line-soft:  #EEF2F6;
-  --surface:    #FFFFFF;
-  --app-bg:     #F6F8FA;
-  --rail:       #0C1B2A;   /* panel instrumen */
+  --ink:        var(--ava-color-ink-900);
+  --ink-2:      var(--ava-color-ink-700);
+  --muted:      var(--ava-color-ink-500);
+  --line:       var(--ava-color-line);
+  --line-soft:  var(--ava-color-surface-100);
+  --surface:    var(--ava-color-surface-0);
+  --app-bg:     var(--ava-color-surface-50);
+  --rail:       #0C1B2A;   /* panel instrumen (tetap) */
   --rail-2:     #13283D;
   --rail-text:  #93A4B7;
   --rail-active:#E6EDF3;
-  --accent:     #0E7C66;   /* AVA Verified */
-  --accent-ink: #0A5D4C;
+  --accent:     var(--ava-color-trust-600);   /* AVA Verified */
+  --accent-ink: var(--ava-color-trust-900);
 
-  --ok:    #15803D;  --ok-bg:    #ECFDF3;
-  --warn:  #B45309;  --warn-bg:  #FFFBEB;
-  --bad:   #B91C1C;  --bad-bg:   #FEF2F2;
+  --ok:    var(--ava-color-ok-500);    --ok-bg:    var(--ava-color-ok-100);
+  --warn:  var(--ava-color-warn-500);  --warn-bg:  var(--ava-color-warn-100);
+  --bad:   var(--ava-color-alert-500); --bad-bg:   var(--ava-color-alert-100);
 
   --r: 10px;
-  --mono: ui-monospace, "SF Mono", "Roboto Mono", Menlo, Consolas, monospace;
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: var(--ava-font-mono, ui-monospace), "SF Mono", Menlo, Consolas, monospace;
+  --sans: var(--ava-font-body, system-ui), -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 * { box-sizing: border-box; }

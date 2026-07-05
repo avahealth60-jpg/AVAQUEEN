@@ -1,4 +1,5 @@
 import '@ava/ui/src/tokens.css';
+import '@ava/ui/src/theme.css';
 import { Inter, Space_Grotesk, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import React from 'react';
@@ -45,8 +46,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     );
   }
 
+  const noFlash = `(function(){try{var t=localStorage.getItem('ava-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`;
   return (
     <html lang="id" className={`${inter.variable} ${display.variable} ${mono.variable}`}>
+      <head><script dangerouslySetInnerHTML={{ __html: noFlash }} /></head>
       <body>{body}</body>
     </html>
   );
