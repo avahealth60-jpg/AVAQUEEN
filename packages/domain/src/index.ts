@@ -12,3 +12,4 @@ export * from './billing/index.js';
 export * from './consult/index.js';
 export * from './marketplace/index.js';
 export * from './corporate/index.js';
+export * from './achievements/index.js';
