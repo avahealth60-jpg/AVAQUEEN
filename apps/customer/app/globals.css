@@ -2,20 +2,24 @@
    Bukan tampilan klinis; legibilitas tinggi, target sentuh besar, warna triase
    yang jelas tapi tidak menakut-nakuti. */
 
+/* Variabel lokal app kini DIJEMBATANI ke token bersama @ava/ui (tokens.css +
+   theme.css). Dengan begitu tema gelap otomatis mengalir ke seluruh komponen. */
 :root {
-  --ink:#102A23; --ink-2:#3D5249; --muted:#6B7F76;
-  --line:#E4ECE8; --surface:#FFFFFF; --app-bg:#F1F6F3;
-  --brand:#0E7C66; --brand-ink:#0A5D4C; --brand-bg:#E6F4EF;
+  --ink:var(--ava-color-ink-900); --ink-2:var(--ava-color-ink-700); --muted:var(--ava-color-ink-500);
+  --line:var(--ava-color-line); --surface:var(--ava-color-surface-0); --app-bg:var(--ava-color-surface-50);
+  --brand:var(--ava-color-trust-600); --brand-ink:var(--ava-color-trust-900); --brand-bg:var(--ava-color-trust-100);
 
-  --normal:#15803D; --normal-bg:#E9F8EF;
-  --perhatian:#B45309; --perhatian-bg:#FFF6E8;
-  --segera:#B3261E; --segera-bg:#FCEDEC;
+  --normal:var(--ava-triage-normal-fg); --normal-bg:var(--ava-triage-normal-bg);
+  --perhatian:var(--ava-triage-perhatian-fg); --perhatian-bg:var(--ava-triage-perhatian-bg);
+  --segera:var(--ava-triage-segera-fg); --segera-bg:var(--ava-triage-segera-bg);
 
   --r:16px;
-  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --sans:var(--ava-font-body,system-ui),-apple-system,"Segoe UI",Roboto,sans-serif;
 }
 *{box-sizing:border-box;} html,body{margin:0;padding:0;}
 body{font-family:var(--sans);color:var(--ink);background:var(--app-bg);-webkit-font-smoothing:antialiased;}
+/* Kartu sedikit lebih 'modern': bayangan lembut berlapis + sudut membulat. */
+.card{box-shadow:var(--ava-elevation-card,0 1px 2px rgba(0,0,0,.05));}
 
 /* Kanvas seukuran ponsel, dipusatkan di layar besar */
 .app{max-width:480px;margin:0 auto;min-height:100vh;background:var(--app-bg);}

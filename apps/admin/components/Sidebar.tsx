@@ -4,6 +4,8 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { SignOutButton } from './SignOutButton';
+import { RoleLauncher } from './RoleLauncher';
+import { ThemeToggle } from './ThemeToggle';
 
 interface Item { href: string; label: string; }
 interface Group { title: string; items: Item[]; }
@@ -37,12 +39,6 @@ const GROUPS: Group[] = [
       { href: '/konfigurasi', label: 'Konfigurasi' },
     ],
   },
-  {
-    title: 'Superadmin',
-    items: [
-      { href: '/pratinjau', label: 'Pratinjau peran' },
-    ],
-  },
 ];
 
 export function Sidebar({ alertCount = 0, email = null }: { alertCount?: number; email?: string | null }) {
@@ -58,6 +54,8 @@ export function Sidebar({ alertCount = 0, email = null }: { alertCount?: number;
           <div className="rail__sub">Konsol kepercayaan QC</div>
         </div>
       </div>
+
+      <RoleLauncher email={email} />
 
       {GROUPS.map((g) => (
         <React.Fragment key={g.title}>
@@ -83,6 +81,8 @@ export function Sidebar({ alertCount = 0, email = null }: { alertCount?: number;
           })}
         </React.Fragment>
       ))}
+      <div style={{ marginTop: 'auto' }} />
+      <ThemeToggle />
       <SignOutButton email={email} />
     </nav>
   );

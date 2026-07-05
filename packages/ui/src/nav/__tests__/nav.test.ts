@@ -54,18 +54,18 @@ describe('navigasi per peran', () => {
   it('label memakai kata kerja aktif untuk aksi (bukan "Submit")', () => {
     const allLabels = allRoles.flatMap((r) => navByRole[r].items.map((i) => i.label));
     expect(allLabels.some((l) => /submit/i.test(l))).toBe(false);
-    expect(navByRole.customer.items.find((i) => i.id === 'catat')?.label).toMatch(/^Catat/);
     expect(navByRole.lab.items.find((i) => i.id === 'catat-kalibrasi')?.label).toMatch(/^Catat/);
   });
 
-  it('fitur baru V1.1 hadir: wellness & rewards (customer), kurasi (admin)', () => {
-    const custIds = navByRole.customer.items.map((i) => i.id);
-    expect(custIds).toContain('wellness');
-    expect(custIds).toContain('rewards');
-    expect(navByRole.admin.items.map((i) => i.id)).toContain('kurasi');
-
+  it('nav customer memakai route yang benar-benar dibangun (anti-404)', () => {
+    // Route yang ADA di apps/customer/app. Menjaga menu tak menunjuk 404.
+    const built = new Set(['/', '/wellness', '/toko', '/perangkat', '/konsultasi',
+      '/pendamping', '/kerja', '/langganan', '/notifikasi', '/akun']);
+    for (const item of navByRole.customer.items) {
+      expect(built.has(item.href), `route ${item.href} harus ada`).toBe(true);
+    }
     expect(navByRole.customer.items.find((i) => i.id === 'wellness')?.isNew).toBe(true);
-    expect(navByRole.customer.items.find((i) => i.id === 'rewards')?.isNew).toBe(true);
+    expect(navByRole.admin.items.map((i) => i.id)).toContain('kurasi');
   });
 
   it('admin menyertakan inspektur peran (lihat sebagai)', () => {

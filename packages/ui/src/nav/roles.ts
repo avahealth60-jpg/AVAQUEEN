@@ -5,18 +5,22 @@
  */
 import type { RoleNav } from './types.js';
 
+// Navigasi customer = route yang BENAR-BENAR ada di apps/customer/app.
+// (Sebelumnya menunjuk /catat, /hasil, /rewards yang belum dibangun → 404.)
 export const customerNav: RoleNav = {
   role: 'customer',
   roleLabel: 'Pendamping harian',
   tagline: 'Hasil pemeriksaan jadi pemahaman, lalu tindakan.',
   items: [
-    { id: 'beranda', label: 'Beranda', href: '/', icon: 'Home', description: 'Ringkasan kesehatan & rekomendasi hari ini.' },
-    { id: 'catat', label: 'Catat pemeriksaan', href: '/catat', icon: 'ClipboardPlus', description: 'Masukkan banyak parameter sekaligus lewat panel.' },
-    { id: 'hasil', label: 'Hasil & evaluasi', href: '/hasil', icon: 'Activity', description: 'Evaluasi komprehensif: artinya, penyebab, saran.' },
-    { id: 'riwayat', label: 'Riwayat & tren', href: '/riwayat', icon: 'TrendingUp', description: 'Lihat pola nilaimu dari waktu ke waktu.' },
-    { id: 'konsultasi', label: 'Konsultasi', href: '/konsultasi', icon: 'Video', description: 'Telemedicine dengan dokter terverifikasi.' },
+    { id: 'beranda', label: 'Beranda', href: '/', icon: 'Home', description: 'Ringkasan kesehatan, catat pemeriksaan & riwayat.' },
     { id: 'wellness', label: 'Wellness', href: '/wellness', icon: 'Sprout', description: 'Program & kebiasaan sehat harian.', isNew: true },
-    { id: 'rewards', label: 'Rewards', href: '/rewards', icon: 'Gift', description: 'Voucher & mitra brand terkurasi.', isNew: true },
+    { id: 'toko', label: 'Toko', href: '/toko', icon: 'ShoppingBag', description: 'Alat kesehatan ber-badge AVA Verified.', isNew: true },
+    { id: 'perangkat', label: 'Perangkat', href: '/perangkat', icon: 'Watch', description: 'Hubungkan smartwatch & lihat tren aktivitas.', isNew: true },
+    { id: 'konsultasi', label: 'Konsultasi', href: '/konsultasi', icon: 'Video', description: 'Telemedicine dengan dokter terverifikasi.' },
+    { id: 'pendamping', label: 'Pendamping', href: '/pendamping', icon: 'Users', description: 'Berbagi kondisimu ke keluarga, atau pantau mereka.', isNew: true },
+    { id: 'kerja', label: 'Kantor', href: '/kerja', icon: 'Building2', description: 'Program wellness dari pemberi kerja.', isNew: true },
+    { id: 'langganan', label: 'Langganan', href: '/langganan', icon: 'Sparkles', description: 'Paket Premium: diskon konsultasi & lebih banyak.' },
+    { id: 'notifikasi', label: 'Notifikasi', href: '/notifikasi', icon: 'Bell', description: 'Pengingat, nudge, & alert pendamping.' },
     { id: 'akun', label: 'Akun', href: '/akun', icon: 'UserCog', description: 'Kelola consent, data, dan profil.' },
   ],
 };

@@ -1,0 +1,107 @@
+/* AVA Health — Lapisan Tema (medis-modern) — terang + gelap.
+   Diimpor SETELAH tokens.css di tiap app. tokens.css (auto-generated) tetap
+   sumber token TERANG; file ini menambah:
+     • token turunan (aksen lembut, ring fokus, elevasi berwarna)
+     • tema GELAP via [data-theme="dark"] (dan fallback prefers-color-scheme)
+     • base modern: antialiasing, transisi tema, scrollbar, focus-visible.
+   Semua app memakai token yang sama → satu design system. */
+
+:root {
+  color-scheme: light;
+  /* Aksen & permukaan turunan (dipakai lintas app). */
+  --ava-color-trust-50: #F0F9F5;
+  --ava-app-bg: var(--ava-color-surface-50);
+  --ava-card-bg: var(--ava-color-surface-0);
+  --ava-ring: 0 0 0 3px rgba(19, 138, 107, 0.22);
+  --ava-elevation-card: 0 1px 2px rgba(14, 22, 20, 0.04), 0 8px 24px -12px rgba(14, 22, 20, 0.14);
+  --ava-elevation-pop: 0 12px 40px -8px rgba(14, 22, 20, 0.22);
+}
+
+/* ── TEMA GELAP ──────────────────────────────────────────────────
+   Balik skala ink & permukaan; jaga aksen hijau tetap kontras (AA). */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --ava-color-ink-900: #EAF1EE;
+  --ava-color-ink-700: #C3CFCB;
+  --ava-color-ink-500: #93A29D;
+  --ava-color-ink-300: #64726D;
+
+  --ava-color-surface-0: #141C1A;   /* kartu */
+  --ava-color-surface-50: #0D1210;  /* latar app */
+  --ava-color-surface-100: #1E2725;
+  --ava-color-line: #273330;
+  --ava-color-line-strong: #384744;
+
+  --ava-color-trust-50: #12241E;
+  --ava-color-trust-100: #16302A;   /* tint bg */
+  --ava-color-trust-300: #2E7C66;
+  --ava-color-trust-500: #2FB894;
+  --ava-color-trust-600: #34C6A0;   /* aksen utama (cerah utk dark) */
+  --ava-color-trust-900: #2AA588;   /* hover (sedikit lebih gelap) */
+
+  --ava-color-ok-500: #34C6A0;   --ava-color-ok-100: #16302A;
+  --ava-color-warn-500: #E0A94E; --ava-color-warn-100: #34290F;
+  --ava-color-alert-500: #F0857A; --ava-color-alert-100: #351A17;
+  --ava-color-neutral-500: #93A29D; --ava-color-neutral-100: #1E2725;
+
+  --ava-triage-normal-fg: #4FD3AF;    --ava-triage-normal-bg: #14332B;
+  --ava-triage-perhatian-fg: #E6B15C; --ava-triage-perhatian-bg: #352A12;
+  --ava-triage-segera-fg: #F2938A;    --ava-triage-segera-bg: #3A1F1C;
+
+  --ava-qc-lulus-fg: #4FD3AF;         --ava-qc-lulus-bg: #14332B;
+  --ava-qc-perlu-tinjau-fg: #E6B15C;  --ava-qc-perlu-tinjau-bg: #352A12;
+  --ava-qc-gagal-fg: #F2938A;         --ava-qc-gagal-bg: #3A1F1C;
+  --ava-badge-active-fg: #4FD3AF;     --ava-badge-active-bg: #14332B;
+  --ava-badge-expiring-fg: #E6B15C;   --ava-badge-expiring-bg: #352A12;
+  --ava-badge-expired-fg: #93A29D;    --ava-badge-expired-bg: #1E2725;
+
+  --ava-ring: 0 0 0 3px rgba(52, 198, 160, 0.28);
+  --ava-elevation-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 28px -14px rgba(0, 0, 0, 0.6);
+  --ava-elevation-pop: 0 16px 44px -10px rgba(0, 0, 0, 0.65);
+}
+
+/* Ikuti preferensi sistem bila pengguna belum memilih tema eksplisit. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --ava-color-ink-900: #EAF1EE; --ava-color-ink-700: #C3CFCB;
+    --ava-color-ink-500: #93A29D; --ava-color-ink-300: #64726D;
+    --ava-color-surface-0: #141C1A; --ava-color-surface-50: #0D1210;
+    --ava-color-surface-100: #1E2725; --ava-color-line: #273330; --ava-color-line-strong: #384744;
+    --ava-color-trust-50: #12241E; --ava-color-trust-100: #16302A; --ava-color-trust-300: #2E7C66;
+    --ava-color-trust-500: #2FB894; --ava-color-trust-600: #34C6A0; --ava-color-trust-900: #2AA588;
+    --ava-triage-normal-fg: #4FD3AF; --ava-triage-normal-bg: #14332B;
+    --ava-triage-perhatian-fg: #E6B15C; --ava-triage-perhatian-bg: #352A12;
+    --ava-triage-segera-fg: #F2938A; --ava-triage-segera-bg: #3A1F1C;
+  }
+}
+
+/* ── Base modern ─────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+/* Transisi halus saat berganti tema (bukan saat animasi lain). */
+:root[data-theme] body,
+:root[data-theme] body * {
+  transition: background-color var(--ava-motion-base) var(--ava-motion-ease),
+              border-color var(--ava-motion-base) var(--ava-motion-ease),
+              color var(--ava-motion-base) var(--ava-motion-ease);
+}
+:where(a, button, input, select, textarea):focus-visible {
+  outline: none;
+  box-shadow: var(--ava-ring);
+  border-radius: var(--ava-radius-md);
+}
+::selection { background: var(--ava-color-trust-100); color: var(--ava-color-ink-900); }
+/* Scrollbar halus */
+* { scrollbar-width: thin; scrollbar-color: var(--ava-color-line-strong) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--ava-color-line-strong); border-radius: 999px; border: 3px solid transparent; background-clip: content-box; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}

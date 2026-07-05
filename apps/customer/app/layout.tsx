@@ -1,7 +1,11 @@
 import '@ava/ui/src/tokens.css';
+import '@ava/ui/src/theme.css';
 import { Inter, Space_Grotesk, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import React from 'react';
+
+// Set tema sebelum paint (hindari kedip). Tanpa pilihan → ikut sistem.
+const NO_FLASH = `(function(){try{var t=localStorage.getItem('ava-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`;
 import { getCustomerAuth } from '../lib/auth';
 import { hasActiveConsent } from '../lib/data';
 import { LoginForm } from '../components/LoginForm';
@@ -29,6 +33,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   if (auth.configured && !auth.userId) {
     return (
       <html lang="id" className={`${inter.variable} ${display.variable} ${mono.variable}`}>
+        <head><script dangerouslySetInnerHTML={{ __html: NO_FLASH }} /></head>
         <body><LoginForm /></body>
       </html>
     );
@@ -37,6 +42,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const consent = auth.configured ? await hasActiveConsent() : false;
   return (
     <html lang="id" className={`${inter.variable} ${display.variable} ${mono.variable}`}>
+      <head><script dangerouslySetInnerHTML={{ __html: NO_FLASH }} /></head>
       <body>
         <div className="app">
           {auth.configured && <AppBar hasConsent={consent} />}
