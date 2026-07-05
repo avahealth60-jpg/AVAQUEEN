@@ -207,6 +207,19 @@ export async function declineConsultation(id: string): Promise<ActionResult> {
   return { ok: true, message: 'Permintaan ditolak.' };
 }
 
+/** Dokter menyimpan catatan/resep untuk pasien (tampil ke pasien). */
+export async function saveConsultNote(id: string, note: string): Promise<ActionResult> {
+  const auth = await getPartnerAuth();
+  if (auth.role !== 'doctor') return { ok: false, message: 'Hanya dokter yang dapat menulis catatan.' };
+  const supabase = createClient();
+  // RLS "doctor updates assigned consultation" membatasi ke konsultasi dokter ini.
+  const { error } = await supabase.from('consultations')
+    .update({ doctor_note: note.trim() || null }).eq('id', id);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath('/');
+  return { ok: true, message: 'Catatan tersimpan & terlihat pasien.' };
+}
+
 export async function completeConsultation(id: string): Promise<ActionResult> {
   const auth = await getPartnerAuth();
   if (auth.role !== 'doctor') return { ok: false, message: 'Hanya dokter yang dapat menyelesaikan.' };

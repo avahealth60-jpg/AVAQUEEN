@@ -5,7 +5,7 @@ import type { Triage } from '@ava/domain';
 export interface SharedReading { id: string; type: string; display: string; triage: Triage | null; }
 export interface DoctorConsult {
   id: string; patientName: string; status: string; scheduledAt: string | null;
-  joinUrl: string | null; fee: number; sharedReadings: SharedReading[];
+  joinUrl: string | null; fee: number; sharedReadings: SharedReading[]; doctorNote: string | null;
 }
 
 const LABEL: Record<string, string> = {
@@ -20,9 +20,9 @@ export async function doctorConsultations(): Promise<DoctorConsult[]> {
   const supabase = createClient();
   const { data: cs } = await supabase
     .from('consultations')
-    .select('id, customer_id, status, scheduled_at, join_url, shared_reading_ids, fee')
+    .select('id, customer_id, status, scheduled_at, join_url, shared_reading_ids, fee, doctor_note')
     .order('created_at', { ascending: false });
-  const rows = (cs ?? []) as { id: string; customer_id: string; status: string; scheduled_at: string | null; join_url: string | null; shared_reading_ids: string[]; fee: number }[];
+  const rows = (cs ?? []) as { id: string; customer_id: string; status: string; scheduled_at: string | null; join_url: string | null; shared_reading_ids: string[]; fee: number; doctor_note: string | null }[];
   if (rows.length === 0) return [];
 
   // Nama pasien (RLS "doctor reads own patients").
@@ -54,6 +54,7 @@ export async function doctorConsultations(): Promise<DoctorConsult[]> {
       const rd = readingMap.get(id);
       return { id, type: rd ? (LABEL[rd.type] ?? rd.type) : '—', display: rd?.display ?? '', triage: triageMap.get(id) ?? null };
     }),
+    doctorNote: r.doctor_note ?? null,
   }));
 }
 
