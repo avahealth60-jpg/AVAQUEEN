@@ -1,8 +1,9 @@
 // apps/admin/lib/apps.ts — target "Buka sebagai" untuk Super Admin.
-// URL tiap app diatur via env di Vercel (deployment terpisah). Fallback lokal
-// untuk dev. Karena dipakai komponen klien, pakai prefix NEXT_PUBLIC_.
-const CUSTOMER_URL = process.env.NEXT_PUBLIC_CUSTOMER_URL || 'http://localhost:3000';
-const PARTNER_URL = process.env.NEXT_PUBLIC_PARTNER_URL || 'http://localhost:3002';
+// Default = deployment PRODUKSI Vercel. Bisa dioverride via env (mis. untuk dev
+// lokal set NEXT_PUBLIC_CUSTOMER_URL=http://localhost:3000). Prefix NEXT_PUBLIC_
+// karena dipakai komponen klien.
+const CUSTOMER_URL = process.env.NEXT_PUBLIC_CUSTOMER_URL || 'https://avaqueen-customer.vercel.app';
+const PARTNER_URL = process.env.NEXT_PUBLIC_PARTNER_URL || 'https://avaqueen-partner.vercel.app';
 
 export interface AppTarget {
   key: string;
