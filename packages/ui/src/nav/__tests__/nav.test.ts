@@ -59,7 +59,7 @@ describe('navigasi per peran', () => {
 
   it('nav customer memakai route yang benar-benar dibangun (anti-404)', () => {
     // Route yang ADA di apps/customer/app. Menjaga menu tak menunjuk 404.
-    const built = new Set(['/', '/wellness', '/toko', '/perangkat', '/konsultasi',
+    const built = new Set(['/', '/riwayat', '/wellness', '/toko', '/perangkat', '/konsultasi',
       '/pendamping', '/kerja', '/langganan', '/notifikasi', '/akun']);
     for (const item of navByRole.customer.items) {
       expect(built.has(item.href), `route ${item.href} harus ada`).toBe(true);

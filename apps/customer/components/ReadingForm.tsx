@@ -55,7 +55,14 @@ export function ReadingForm() {
       {state?.ok && state.triage && (
         <div className={`result result--${triageMeta(state.triage).cls}`} role="status">
           <span className="result__tag"><span className="result__dot" />{triageMeta(state.triage).label}</span>
-          <p className="result__text">{state.explanation}</p>
+          <p className="result__text">{state.artinya ?? state.explanation}</p>
+          {(state.penyebab || state.saran || state.kapanKeDokter) && (
+            <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+              {state.penyebab && <div className="result__text" style={{ fontSize: 14 }}><strong>Kemungkinan penyebab:</strong> {state.penyebab}</div>}
+              {state.saran && <div className="result__text" style={{ fontSize: 14 }}><strong>Saran:</strong> {state.saran}</div>}
+              {state.kapanKeDokter && <div className="result__text" style={{ fontSize: 14 }}><strong>Kapan ke dokter:</strong> {state.kapanKeDokter}</div>}
+            </div>
+          )}
           {state.suggestConsultation && (
             <div className="result__cta">
               <Link className="btn btn--ghost" href="/konsultasi" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>

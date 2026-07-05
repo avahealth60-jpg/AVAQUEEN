@@ -2,13 +2,16 @@
 import React from 'react';
 import Link from 'next/link';
 import { getCustomerAuth } from '../../lib/auth';
-import { hasActiveConsent, wearableConsentActive, billingSummary } from '../../lib/data';
+import { hasActiveConsent, wearableConsentActive, billingSummary, myProfile } from '../../lib/data';
 import { ConnBanner } from '../../components/ConnBanner';
 import { ConsentToggle, SignOutButton } from '../../components/AccountActions';
+import { ProfileForm } from '../../components/ProfileForm';
+import { DataPrivacy } from '../../components/DataPrivacy';
 
 export const dynamic = 'force-dynamic';
 
 const FEATURES: { href: string; label: string; desc: string }[] = [
+  { href: '/riwayat', label: 'Riwayat & tren', desc: 'Semua hasil pemeriksaan' },
   { href: '/perangkat', label: 'Perangkat & smartwatch', desc: 'Hubungkan wearable, lihat tren' },
   { href: '/pendamping', label: 'Pendamping keluarga', desc: 'Berbagi & memantau' },
   { href: '/kerja', label: 'Wellness kantor', desc: 'Program pemberi kerja' },
@@ -20,8 +23,8 @@ export default async function AkunPage() {
   const auth = await getCustomerAuth();
   if (!auth.configured) return <div className="screen"><ConnBanner /></div>;
 
-  const [consent, wearable, billing] = await Promise.all([
-    hasActiveConsent(), wearableConsentActive(), billingSummary(),
+  const [consent, wearable, billing, profile] = await Promise.all([
+    hasActiveConsent(), wearableConsentActive(), billingSummary(), myProfile(),
   ]);
 
   return (
@@ -55,6 +58,10 @@ export default async function AkunPage() {
         </div>
       </div>
 
+      {/* Profil medis */}
+      <div className="section-h">Profil medis</div>
+      <ProfileForm profile={profile} />
+
       {/* Consent */}
       <div className="section-h">Privasi & persetujuan</div>
       <div className="card"><ConsentToggle active={consent} /></div>
@@ -86,6 +93,10 @@ export default async function AkunPage() {
           </Link>
         ))}
       </div>
+
+      {/* Data & privasi */}
+      <div className="section-h">Data & privasi</div>
+      <DataPrivacy />
 
       {/* Keluar */}
       <div style={{ marginTop: 20 }}><SignOutButton /></div>

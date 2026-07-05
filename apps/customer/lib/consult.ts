@@ -30,15 +30,15 @@ export async function shareableReadings(): Promise<ReadingOption[]> {
 
 export interface ConsultView {
   id: string; doctorName: string; status: string; scheduledAt: string | null;
-  joinUrl: string | null; sharedCount: number; fee: number;
+  joinUrl: string | null; sharedCount: number; fee: number; doctorNote: string | null;
 }
 export async function myConsultations(): Promise<ConsultView[]> {
   const supabase = createClient();
   const { data } = await supabase
     .from('consultations')
-    .select('id, doctor_id, status, scheduled_at, join_url, shared_reading_ids, fee')
+    .select('id, doctor_id, status, scheduled_at, join_url, shared_reading_ids, fee, doctor_note')
     .order('created_at', { ascending: false });
-  const rows = (data ?? []) as { id: string; doctor_id: string; status: string; scheduled_at: string | null; join_url: string | null; shared_reading_ids: string[]; fee: number }[];
+  const rows = (data ?? []) as { id: string; doctor_id: string; status: string; scheduled_at: string | null; join_url: string | null; shared_reading_ids: string[]; fee: number; doctor_note: string | null }[];
   const docIds = [...new Set(rows.map((r) => r.doctor_id))];
   const names = new Map<string, string>();
   if (docIds.length) {
@@ -48,5 +48,6 @@ export async function myConsultations(): Promise<ConsultView[]> {
   return rows.map((r) => ({
     id: r.id, doctorName: names.get(r.doctor_id) ?? 'Dokter', status: r.status,
     scheduledAt: r.scheduled_at, joinUrl: r.join_url, sharedCount: r.shared_reading_ids?.length ?? 0, fee: r.fee,
+    doctorNote: r.doctor_note ?? null,
   }));
 }

@@ -2,7 +2,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { getCustomerAuth } from '../../lib/auth';
-import { wellnessDashboard } from '../../lib/data';
+import { wellnessDashboard, myProfile } from '../../lib/data';
 import { ConnBanner } from '../../components/ConnBanner';
 import { WellnessCard } from '../../components/WellnessCard';
 import { WellnessCalculators } from '../../components/WellnessCalculators';
@@ -13,7 +13,7 @@ export default async function WellnessPage() {
   const { configured } = await getCustomerAuth();
   if (!configured) return <div className="screen"><ConnBanner /></div>;
 
-  const cards = await wellnessDashboard();
+  const [cards, profile] = await Promise.all([wellnessDashboard(), myProfile()]);
   const active = cards.filter((c) => c.enrolled);
   const available = cards.filter((c) => !c.enrolled);
 
@@ -38,7 +38,10 @@ export default async function WellnessPage() {
         </p>
       </header>
 
-      <WellnessCalculators />
+      <WellnessCalculators initial={{
+        beratKg: profile.weightKg, tinggiCm: profile.heightCm,
+        usia: profile.ageYears, sex: profile.sex,
+      }} />
 
       {active.length > 0 && (
         <>

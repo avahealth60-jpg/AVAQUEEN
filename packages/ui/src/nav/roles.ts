@@ -13,6 +13,7 @@ export const customerNav: RoleNav = {
   tagline: 'Hasil pemeriksaan jadi pemahaman, lalu tindakan.',
   items: [
     { id: 'beranda', label: 'Beranda', href: '/', icon: 'Home', description: 'Ringkasan kesehatan, catat pemeriksaan & riwayat.' },
+    { id: 'riwayat', label: 'Riwayat', href: '/riwayat', icon: 'TrendingUp', description: 'Riwayat & tren pemeriksaan lintas waktu.' },
     { id: 'wellness', label: 'Wellness', href: '/wellness', icon: 'Sprout', description: 'Program & kebiasaan sehat harian.', isNew: true },
     { id: 'toko', label: 'Toko', href: '/toko', icon: 'ShoppingBag', description: 'Alat kesehatan ber-badge AVA Verified.', isNew: true },
     { id: 'perangkat', label: 'Perangkat', href: '/perangkat', icon: 'Watch', description: 'Hubungkan smartwatch & lihat tren aktivitas.', isNew: true },

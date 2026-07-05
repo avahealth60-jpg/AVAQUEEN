@@ -280,6 +280,78 @@ export async function patientReadings(patientId: string): Promise<ReadingView[]>
   return readingsFor(patientId);
 }
 
+// ── Basis pengetahuan / evaluasi komprehensif (A1) ───────────────
+// Peta reading_type (input customer) → parameters.code (katalog v1.1.1).
+const READING_TO_PARAM: Record<string, string> = {
+  glucose_fasting: 'glukosa_puasa', spo2: 'spo2', heart_rate: 'nadi',
+  temperature: 'suhu', blood_pressure: 'td_sistolik',
+};
+
+export interface KnowledgeView {
+  artinya: string;
+  penyebab: string | null;
+  saran: string | null;
+  kapanKeDokter: string | null;
+}
+
+/** Konten edukatif terkurasi (artinya/penyebab/saran/kapan) bila ada. */
+export async function knowledgeFor(readingType: string, triage: Triage): Promise<KnowledgeView | null> {
+  const code = READING_TO_PARAM[readingType];
+  if (!code) return null;
+  const supabase = createClient();
+  const { data } = await supabase
+    .from('knowledge_entries')
+    .select('artinya, penyebab, saran, kapan_ke_dokter, parameters!inner(code)')
+    .eq('parameters.code', code).eq('triage', triage).eq('is_active', true)
+    .limit(1).maybeSingle();
+  if (!data) return null;
+  return {
+    artinya: (data as any).artinya,
+    penyebab: (data as any).penyebab ?? null,
+    saran: (data as any).saran ?? null,
+    kapanKeDokter: (data as any).kapan_ke_dokter ?? null,
+  };
+}
+
+// ── Profil medis ─────────────────────────────────────────────────
+export interface MedicalProfile {
+  fullName: string | null;
+  sex: 'pria' | 'wanita' | null;
+  birthDate: string | null;
+  heightCm: number | null;
+  weightKg: number | null;
+  ageYears: number | null;
+}
+
+function ageFrom(birthDate: string | null): number | null {
+  if (!birthDate) return null;
+  const b = new Date(birthDate);
+  if (Number.isNaN(b.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - b.getFullYear();
+  const m = now.getMonth() - b.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
+  return age >= 0 && age < 130 ? age : null;
+}
+
+export async function myProfile(): Promise<MedicalProfile> {
+  const id = await myId();
+  const empty: MedicalProfile = { fullName: null, sex: null, birthDate: null, heightCm: null, weightKg: null, ageYears: null };
+  if (!id) return empty;
+  const supabase = createClient();
+  const { data } = await supabase
+    .from('profiles').select('full_name, sex, birth_date, height_cm, weight_kg').eq('id', id).maybeSingle();
+  if (!data) return empty;
+  return {
+    fullName: data.full_name ?? null,
+    sex: (data.sex as 'pria' | 'wanita' | null) ?? null,
+    birthDate: data.birth_date ?? null,
+    heightCm: data.height_cm != null ? Number(data.height_cm) : null,
+    weightKg: data.weight_kg != null ? Number(data.weight_kg) : null,
+    ageYears: ageFrom(data.birth_date ?? null),
+  };
+}
+
 // ── Notifikasi (Fase C) ──────────────────────────────────────────
 export interface NotificationView {
   id: string;

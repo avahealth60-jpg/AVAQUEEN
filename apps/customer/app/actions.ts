@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '../lib/supabase/server';
 import { getCustomerAuth } from '../lib/auth';
 import { CONSENT_PURPOSE, WEARABLE_CONSENT_PURPOSE } from '../lib/catalog';
+import { knowledgeFor } from '../lib/data';
 import {
   analyzeReading,
   normalizeWearableBatch,
@@ -71,6 +72,11 @@ export interface SubmitResult {
   explanation?: string;
   disclaimer?: string;
   suggestConsultation?: boolean;
+  // Evaluasi komprehensif dari basis pengetahuan terkurasi (bila tersedia).
+  artinya?: string;
+  penyebab?: string;
+  saran?: string;
+  kapanKeDokter?: string;
 }
 
 export async function submitReading(
@@ -126,6 +132,9 @@ export async function submitReading(
   });
   if (aErr) return { ok: false, message: `Hasil tersimpan, analisis gagal: ${aErr.message}` };
 
+  // Evaluasi komprehensif dari basis pengetahuan terkurasi (bila ada).
+  const knowledge = await knowledgeFor(type, draft.triage);
+
   revalidatePath('/');
   return {
     ok: true,
@@ -134,6 +143,10 @@ export async function submitReading(
     explanation: draft.explanation,
     disclaimer: draft.disclaimer,
     suggestConsultation: draft.suggest_consultation,
+    artinya: knowledge?.artinya,
+    penyebab: knowledge?.penyebab ?? undefined,
+    saran: knowledge?.saran ?? undefined,
+    kapanKeDokter: knowledge?.kapanKeDokter ?? undefined,
   };
 }
 
@@ -590,6 +603,82 @@ export async function checkoutCart(items: CartItem[]): Promise<OrderResult> {
   revalidatePath('/toko');
   const n = orderItems.reduce((s, i) => s + i.qty, 0);
   return { ok: true, message: `Pesanan (${n} item) diterima & dibayar — Rp${total.toLocaleString('id-ID')}.` };
+}
+
+// ── Profil medis & data (PDP) ────────────────────────────────────
+export interface ProfileResult { ok: boolean; message: string; }
+
+export async function updateProfile(input: {
+  fullName?: string; sex?: string; birthDate?: string; heightCm?: number; weightKg?: number;
+}): Promise<ProfileResult> {
+  const { userId } = await getCustomerAuth();
+  if (!userId) return { ok: false, message: 'Silakan masuk dulu.' };
+
+  const patch: Record<string, unknown> = {};
+  if (input.fullName !== undefined) patch.full_name = input.fullName.trim() || null;
+  if (input.sex !== undefined) patch.sex = input.sex === 'pria' || input.sex === 'wanita' ? input.sex : null;
+  if (input.birthDate !== undefined) patch.birth_date = input.birthDate || null;
+  if (input.heightCm !== undefined) patch.height_cm = Number(input.heightCm) > 0 ? Number(input.heightCm) : null;
+  if (input.weightKg !== undefined) patch.weight_kg = Number(input.weightKg) > 0 ? Number(input.weightKg) : null;
+
+  const supabase = createClient();
+  // Trigger DB mengabaikan perubahan `role`, jadi update ini aman.
+  const { error } = await supabase.from('profiles').update(patch).eq('id', userId);
+  if (error) return { ok: false, message: `Gagal menyimpan profil: ${error.message}` };
+  revalidatePath('/akun');
+  revalidatePath('/wellness');
+  return { ok: true, message: 'Profil tersimpan.' };
+}
+
+export interface ExportResult { ok: boolean; message: string; data?: string }
+
+/** Ekspor SEMUA data milik pengguna sebagai JSON (hak portabilitas UU PDP). */
+export async function exportMyData(): Promise<ExportResult> {
+  const { userId } = await getCustomerAuth();
+  if (!userId) return { ok: false, message: 'Silakan masuk dulu.' };
+  const supabase = createClient();
+
+  const [profile, readings, analyses, consults, consents, wellness, checkins, orders, subs] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
+    supabase.from('health_readings').select('*').eq('customer_id', userId),
+    supabase.from('analysis_results').select('*'),
+    supabase.from('consultations').select('*').eq('customer_id', userId),
+    supabase.from('consents').select('*').eq('customer_id', userId),
+    supabase.from('wellness_enrollments').select('*').eq('customer_id', userId),
+    supabase.from('wellness_checkins').select('*').eq('customer_id', userId),
+    supabase.from('orders').select('*').eq('customer_id', userId),
+    supabase.from('subscriptions').select('*').eq('customer_id', userId),
+  ]);
+
+  const bundle = {
+    exportedAt: new Date().toISOString(),
+    profile: profile.data ?? null,
+    healthReadings: readings.data ?? [],
+    analysisResults: analyses.data ?? [],
+    consultations: consults.data ?? [],
+    consents: consents.data ?? [],
+    wellnessEnrollments: wellness.data ?? [],
+    wellnessCheckins: checkins.data ?? [],
+    orders: orders.data ?? [],
+    subscriptions: subs.data ?? [],
+  };
+  return { ok: true, message: 'Data siap diunduh.', data: JSON.stringify(bundle, null, 2) };
+}
+
+/** Hapus akun: hapus baris profil (cascade menghapus data turunannya). */
+export async function deleteMyAccount(confirmText: string): Promise<ProfileResult> {
+  const { userId } = await getCustomerAuth();
+  if (!userId) return { ok: false, message: 'Silakan masuk dulu.' };
+  if (confirmText.trim().toUpperCase() !== 'HAPUS') {
+    return { ok: false, message: 'Ketik HAPUS untuk konfirmasi.' };
+  }
+  const supabase = createClient();
+  // Fungsi definer menghapus semua data dalam urutan aman-FK.
+  const { data, error } = await supabase.rpc('delete_my_account');
+  if (error) return { ok: false, message: `Gagal menghapus: ${error.message}` };
+  if (!data) return { ok: false, message: 'Penghapusan tidak dapat diproses.' };
+  await supabase.auth.signOut();
+  return { ok: true, message: 'Akun & data kamu dihapus.' };
 }
 
 // ── Konsultasi ───────────────────────────────────────────────────
