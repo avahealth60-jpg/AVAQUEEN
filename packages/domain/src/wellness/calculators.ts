@@ -155,3 +155,79 @@ export function runningPace(minutes: number, km: number): { minPerKm: number; te
   const s = Math.round((minPerKm - m) * 60);
   return { minPerKm: Math.round(minPerKm * 100) / 100, text: `${m}:${String(s).padStart(2, '0')} /km` };
 }
+
+/* ── Rencana target berat ──────────────────────────────────────── */
+/** 1 kg lemak ≈ 7700 kkal. */
+const KCAL_PER_KG = 7700;
+export type WeightGoalDirection = 'turun' | 'naik' | 'jaga';
+
+export interface WeightPlan {
+  direction: WeightGoalDirection;
+  totalKg: number;         // selisih absolut
+  weeks: number;           // perkiraan minggu dgn laju aman
+  dailyCalAdjust: number;  // + surplus / − defisit per hari (0 bila jaga)
+}
+
+/** Rencana capai berat target dengan laju aman (default 0.5 kg/minggu). */
+export function targetWeightPlan(
+  currentKg: number,
+  targetKg: number,
+  weeklyRateKg = 0.5,
+): WeightPlan {
+  positive(currentKg, 'Berat saat ini');
+  positive(targetKg, 'Berat target');
+  positive(weeklyRateKg, 'Laju/minggu');
+  const diff = currentKg - targetKg; // + = perlu turun
+  const totalKg = Math.round(Math.abs(diff) * 10) / 10;
+  if (totalKg < 0.1) return { direction: 'jaga', totalKg: 0, weeks: 0, dailyCalAdjust: 0 };
+  const weeks = Math.ceil(totalKg / weeklyRateKg);
+  const dailyMag = Math.round((weeklyRateKg * KCAL_PER_KG) / 7);
+  return {
+    direction: diff > 0 ? 'turun' : 'naik',
+    totalKg,
+    weeks,
+    dailyCalAdjust: diff > 0 ? -dailyMag : dailyMag,
+  };
+}
+
+/* ── Kebutuhan makro ───────────────────────────────────────────── */
+export type MacroPreset = 'seimbang' | 'tinggi_protein' | 'rendah_karbo';
+const MACRO_SPLIT: Record<MacroPreset, { p: number; c: number; f: number }> = {
+  seimbang: { p: 0.3, c: 0.4, f: 0.3 },
+  tinggi_protein: { p: 0.4, c: 0.35, f: 0.25 },
+  rendah_karbo: { p: 0.35, c: 0.25, f: 0.4 },
+};
+export const MACRO_PRESET_LABEL: Record<MacroPreset, string> = {
+  seimbang: 'Seimbang',
+  tinggi_protein: 'Tinggi protein',
+  rendah_karbo: 'Rendah karbo',
+};
+
+export interface Macros { proteinG: number; carbG: number; fatG: number; }
+
+/** Bagi kalori harian ke gram protein/karbo/lemak (4/4/9 kkal per gram). */
+export function macros(calories: number, preset: MacroPreset = 'seimbang'): Macros {
+  positive(calories, 'Kalori');
+  const s = MACRO_SPLIT[preset];
+  return {
+    proteinG: Math.round((calories * s.p) / 4),
+    carbG: Math.round((calories * s.c) / 4),
+    fatG: Math.round((calories * s.f) / 9),
+  };
+}
+
+/* ── Langkah → jarak & kalori ──────────────────────────────────── */
+/** Estimasi jarak (km) dari jumlah langkah + tinggi (panjang langkah ≈ 0.415×tinggi). */
+export function stepsToDistanceKm(steps: number, heightCm: number): number {
+  positive(steps, 'Langkah');
+  positive(heightCm, 'Tinggi');
+  const strideCm = heightCm * 0.415;
+  return Math.round(((steps * strideCm) / 100000) * 100) / 100;
+}
+
+/** Estimasi kalori dari langkah (≈ 0.0005 kkal per langkah per kg berat). */
+export function stepsCalories(steps: number, weightKg: number): number {
+  positive(steps, 'Langkah');
+  positive(weightKg, 'Berat');
+  return Math.round(steps * weightKg * 0.0005);
+}

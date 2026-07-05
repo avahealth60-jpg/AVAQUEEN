@@ -10,6 +10,10 @@ import {
   listActivities,
   dailyWaterMl,
   runningPace,
+  targetWeightPlan,
+  macros,
+  stepsToDistanceKm,
+  stepsCalories,
   ACTIVITY_METS,
   CalculatorError,
 } from '../index.js';
@@ -83,5 +87,39 @@ describe('Air harian & pace', () => {
   });
   it('pace membulatkan detik', () => {
     expect(runningPace(31, 5).text).toBe('6:12 /km'); // 6.2 → 6:12
+  });
+});
+
+describe('Target berat', () => {
+  it('turun 5 kg @0.5/mgg → 10 minggu, defisit ~550/hari', () => {
+    const p = targetWeightPlan(75, 70, 0.5);
+    expect(p.direction).toBe('turun');
+    expect(p.totalKg).toBe(5);
+    expect(p.weeks).toBe(10);
+    expect(p.dailyCalAdjust).toBe(-Math.round(0.5 * 7700 / 7)); // -550
+  });
+  it('naik berat → surplus positif', () => {
+    expect(targetWeightPlan(55, 60).dailyCalAdjust).toBeGreaterThan(0);
+  });
+  it('sudah di target → jaga', () => {
+    expect(targetWeightPlan(70, 70).direction).toBe('jaga');
+  });
+});
+
+describe('Makro', () => {
+  it('membagi kalori ke gram (4/4/9)', () => {
+    const m = macros(2000, 'seimbang'); // 30/40/30
+    expect(m.proteinG).toBe(Math.round(2000 * 0.3 / 4)); // 150
+    expect(m.carbG).toBe(Math.round(2000 * 0.4 / 4)); // 200
+    expect(m.fatG).toBe(Math.round(2000 * 0.3 / 9)); // 67
+  });
+});
+
+describe('Langkah → jarak & kalori', () => {
+  it('10rb langkah, tinggi 170 → ~7 km', () => {
+    expect(stepsToDistanceKm(10000, 170)).toBeCloseTo(7.06, 1);
+  });
+  it('kalori langkah proporsional', () => {
+    expect(stepsCalories(10000, 70)).toBe(350);
   });
 });
