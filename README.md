@@ -26,12 +26,15 @@ ditunda" di bawah.
 | **`packages/domain/notify`** — nudge wellness + alert pendamping (Fase C) | ✅ 8 tes; nudge hangat non-klinis, alert edukatif dari triase tersimpan | `npm run test:domain` |
 | **`packages/domain/billing`** — paket, harga & entitlement (Fase C) | ✅ 12 tes; diskon konsultasi Premium, komisi cermin trigger SQL | `npm run test:domain` |
 | **RLS billing** — langganan anti-self-grant; aktivasi via konfirmasi bayar | ✅ 9 tes adversarial (klien tak bisa tulis subscription/paid) | `npm run test:rls` |
-| **`apps/customer`** — UI: catat, perangkat, wellness, pendamping, notifikasi, langganan | ✅ `next build` sukses (8 route + view pasien read-only) | `npm run build` |
+| **`packages/domain/consult` + app dokter** — state machine konsultasi + tolak | ✅ 6 tes; confirm→complete→komisi, transisi dijaga | `npm run test:domain` |
+| **`packages/domain/marketplace`** — etalase alat ber-badge (order + verifikasi) | ✅ 9 tes + 10 RLS; "AVA Verified" diturunkan dari badge aktif | `npm run test:rls` |
+| **`packages/domain/corporate`** — wellness korporat/B2B (k-anonimitas) | ✅ 8 tes + 9 RLS; pemberi kerja hanya lihat agregat, bukan data individu | `npm run test:rls` |
+| **`apps/customer`** — UI: catat, perangkat, wellness, pendamping, notifikasi, langganan, toko, kerja | ✅ `next build` sukses (10 route) | `npm run build` |
 | **`apps/admin`** — Dashboard Monitoring QC (UI wedge) | ✅ Scaffold Next.js berjalan | `npm run build` |
 | **`apps/customer`, `apps/partner`** — scaffold | ✅ Home page + layout | — |
 | **CI** — GitHub Actions (test + deploy) | ✅ Workflow siap | `.github/workflows/ci.yml` |
 
-**Total: 261 tes lulus** (145 domain + 64 RLS + 52 parity). Semua dijalankan
+**Total: 303 tes lulus** (168 domain + 83 RLS + 52 parity). Semua dijalankan
 nyata — RLS diuji terhadap Postgres asli via PGlite (WASM), bukan disimulasikan.
 
 ---
@@ -84,8 +87,8 @@ npm run build
 npm run test:all
 
 # Atau satu per satu:
-npm run test:domain    # 145 tes logika inti (wearable, wellness, pendamping, notify, billing)
-npm run test:rls       # 64 tes RLS terhadap Postgres asli (PGlite)
+npm run test:domain    # 168 tes logika inti (wearable…billing, consult, marketplace, corporate)
+npm run test:rls       # 83 tes RLS terhadap Postgres asli (PGlite)
 npm run test:parity    # 52 tes: edge function sinkron dgn domain
 
 # 4. Jalankan dashboard admin (wedge QC)
