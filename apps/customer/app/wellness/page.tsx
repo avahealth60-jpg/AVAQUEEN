@@ -5,6 +5,7 @@ import { getCustomerAuth } from '../../lib/auth';
 import { wellnessDashboard } from '../../lib/data';
 import { ConnBanner } from '../../components/ConnBanner';
 import { WellnessCard } from '../../components/WellnessCard';
+import { WellnessCalculators } from '../../components/WellnessCalculators';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +37,8 @@ export default async function WellnessPage() {
           Target harian yang ramah & realistis — terhubung dengan langkah, tidur, dan aktivitasmu.
         </p>
       </header>
+
+      <WellnessCalculators />
 
       {active.length > 0 && (
         <>
