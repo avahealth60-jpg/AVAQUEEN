@@ -2,7 +2,7 @@
 import React, { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFormState, useFormStatus } from 'react-dom';
-import { confirmConsultation, completeConsultation, type ActionResult } from '../app/actions';
+import { confirmConsultation, completeConsultation, declineConsultation, type ActionResult } from '../app/actions';
 
 function ConfirmBtn() {
   const { pending } = useFormStatus();
@@ -36,4 +36,11 @@ export function CompleteButton({ id }: { id: string }) {
   const [pending, start] = useTransition();
   function done() { start(async () => { await completeConsultation(id); router.refresh(); }); }
   return <button className="btn" onClick={done} disabled={pending}>{pending ? 'Menyelesaikan…' : 'Tandai selesai'}</button>;
+}
+
+export function DeclineButton({ id }: { id: string }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  function decline() { start(async () => { await declineConsultation(id); router.refresh(); }); }
+  return <button className="btn btn--ghost" onClick={decline} disabled={pending}>{pending ? 'Menolak…' : 'Tolak'}</button>;
 }

@@ -4,6 +4,7 @@ import { reminderStatus, badgeStatus } from '@ava/domain';
 import { vendorFleet, deviceModels } from '../lib/data';
 import { PageHead, QcTag, DueTag, BadgeTag, Empty } from './widgets';
 import { RegisterDeviceForm } from './RegisterDeviceForm';
+import { PublishListingForm } from './PublishListingForm';
 
 export async function VendorDashboard({ orgName }: { orgName: string | null }) {
   const now = new Date();
@@ -54,6 +55,15 @@ export async function VendorDashboard({ orgName }: { orgName: string | null }) {
           <div className="card__title">Daftarkan alat baru</div>
           <RegisterDeviceForm models={models} />
         </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 16 }}>
+        <div className="card__title">Etalase toko (jual alat ber-badge)</div>
+        <p className="hint" style={{ marginBottom: 12 }}>
+          Tayangkan alatmu ke masyarakat. Listing dari model yang punya badge
+          AVA Verified aktif tampil bertanda terverifikasi otomatis.
+        </p>
+        <PublishListingForm models={models} />
       </div>
     </>
   );

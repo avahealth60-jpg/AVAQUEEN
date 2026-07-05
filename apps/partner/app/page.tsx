@@ -4,6 +4,7 @@ import { getPartnerAuth } from '../lib/auth';
 import { VendorDashboard } from '../components/VendorDashboard';
 import { LabDashboard } from '../components/LabDashboard';
 import { DoctorDashboard } from '../components/DoctorDashboard';
+import { EmployerDashboard } from '../components/EmployerDashboard';
 import { PageHead, ConnBanner, Empty } from '../components/widgets';
 
 export const dynamic = 'force-dynamic';
@@ -17,6 +18,8 @@ export default async function PartnerHome() {
   if (auth.role === 'vendor') return <div className="wrap"><VendorDashboard orgName={auth.org?.name ?? null} /></div>;
   if (auth.role === 'lab') return <div className="wrap"><LabDashboard orgName={auth.org?.name ?? null} /></div>;
   if (auth.role === 'doctor') return <div className="wrap"><DoctorDashboard name={auth.email} /></div>;
+  // Admin pemberi kerja dikenali dari keanggotaan organisasi berjenis 'employer'.
+  if (auth.org?.kind === 'employer') return <div className="wrap"><EmployerDashboard org={auth.org} /></div>;
 
   // faskes_admin — modul faskes menyusul.
   return (
