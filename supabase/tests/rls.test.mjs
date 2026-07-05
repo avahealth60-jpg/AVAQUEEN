@@ -522,5 +522,124 @@ console.log('\n— Billing: langganan tak bisa di-self-grant; aktivasi via konfi
   check('Pelanggan lain tidak melihat pembayaran Alice', bobPays.rows.length === 0);
 }
 
+console.log('\n— Marketplace: etalase publik, verifikasi dari badge, order terisolasi —');
+{
+  // Vendor V1 (Vance) & V2 (Victor) memasang listing untuk model Tensimeter A.
+  // Device V1 sudah punya badge aktif (dari alur wedge di atas); V2 tidak.
+  await asUser(U.vance,
+    `insert into product_listings(id, vendor_id, model_id, title, price, stock)
+     values ('f1111111-0000-0000-0000-000000000001','${ORG.v1}','bbbbbbbb-0000-0000-0000-000000000001','Tensimeter A (V1)',250000,5)`);
+  await asUser(U.victor,
+    `insert into product_listings(id, vendor_id, model_id, title, price, stock)
+     values ('f2222222-0000-0000-0000-000000000002','${ORG.v2}','bbbbbbbb-0000-0000-0000-000000000001','Tensimeter A (V2)',240000,5)`);
+
+  // Publik (anon) melihat listing aktif.
+  const pub = await asAnon('select id from product_listings');
+  check('Publik melihat listing aktif', pub.rows.length >= 2);
+
+  // Hanya listing V1 yang terverifikasi (punya badge aktif).
+  const ver = await asAnon('select verified_listing_ids as id from verified_listing_ids()');
+  const verIds = ver.rows.map((r) => r.id);
+  check('Listing V1 terverifikasi (badge aktif)', verIds.includes('f1111111-0000-0000-0000-000000000001'));
+  check('Listing V2 TIDAK terverifikasi (tanpa badge)', !verIds.includes('f2222222-0000-0000-0000-000000000002'));
+
+  // Vendor tak bisa memasang listing atas nama vendor lain (WITH CHECK keanggotaan).
+  let forgedListing = false;
+  try {
+    await asUser(U.victor,
+      `insert into product_listings(vendor_id, model_id, title, price) values ('${ORG.v1}','bbbbbbbb-0000-0000-0000-000000000001','Palsu',1)`);
+  } catch { forgedListing = true; }
+  check('Vendor TIDAK bisa memasang listing atas nama vendor lain', forgedListing);
+
+  // Alice memesan listing V1 (order + item).
+  await asUser(U.alice,
+    `insert into orders(id, customer_id, total) values ('0dd00000-0000-0000-0000-000000000001','${U.alice}',250000)`);
+  await asUser(U.alice,
+    `insert into order_items(order_id, listing_id, vendor_id, title, qty, unit_price)
+     values ('0dd00000-0000-0000-0000-000000000001','f1111111-0000-0000-0000-000000000001','${ORG.v1}','Tensimeter A (V1)',1,250000)`);
+  const myOrder = await asUser(U.alice, 'select id from orders');
+  check('Pelanggan melihat ordernya sendiri', myOrder.rows.length === 1);
+
+  // Bob tak melihat order Alice.
+  const bobOrder = await asUser(U.bob, `select id from orders where customer_id='${U.alice}'`);
+  check('Pelanggan lain tidak melihat order Alice', bobOrder.rows.length === 0);
+
+  // Vendor V1 MELIHAT order yang memuat itemnya; Vendor V2 tidak.
+  const v1sees = await asUser(U.vance, 'select id from orders');
+  check('Vendor V1 melihat order yang memuat itemnya', v1sees.rows.some((r) => r.id === '0dd00000-0000-0000-0000-000000000001'));
+  const v2sees = await asUser(U.victor, `select id from orders where id='0dd00000-0000-0000-0000-000000000001'`);
+  check('Vendor V2 TIDAK melihat order yang bukan itemnya', v2sees.rows.length === 0);
+
+  // Alice bayar order via konfirmasi (mock webhook) → order 'paid'.
+  const opay = await asUser(U.alice,
+    `insert into payments(customer_id, purpose, ref_id, amount) values ('${U.alice}','order','0dd00000-0000-0000-0000-000000000001',250000) returning id`);
+  const oconf = await asUser(U.alice, `select public.mock_confirm_payment('${opay.rows[0].id}') as ok`);
+  check('Konfirmasi pembayaran order berhasil', oconf.rows[0]?.ok === true);
+  const paidOrder = await asUser(U.alice, `select status from orders where id='0dd00000-0000-0000-0000-000000000001'`);
+  check('Order menjadi paid setelah pembayaran', paidOrder.rows[0]?.status === 'paid');
+}
+
+console.log('\n— Korporat/B2B: pemberi kerja hanya lihat agregat teranonimkan —');
+{
+  const E1 = 'e1100000-0000-0000-0000-000000000001';
+  const E2 = 'e2200000-0000-0000-0000-000000000002';
+  const emp = (i) => `ee000000-0000-0000-0000-0000000000${10 + i}`; // 11..17
+
+  // Setup superuser (bypass RLS): 2 pemberi kerja, Victor sbg admin keduanya,
+  // 5 karyawan di E1 + 2 di E2.
+  let seed = `
+    insert into organizations(id,name,kind,join_code) values
+      ('${E1}','PT Sehat','employer','JOIN-E1'),
+      ('${E2}','CV Kecil','employer','JOIN-E2');
+    insert into organization_members(organization_id, profile_id) values
+      ('${E1}','${U.victor}'), ('${E2}','${U.victor}');
+  `;
+  for (let i = 1; i <= 7; i++) seed += `insert into profiles(id,role,full_name) values ('${emp(i)}','customer','Emp${i}');\n`;
+  for (let i = 1; i <= 5; i++) seed += `insert into employer_enrollments(employer_id,customer_id) values ('${E1}','${emp(i)}');\n`;
+  seed += `insert into employer_enrollments(employer_id,customer_id) values ('${E2}','${emp(6)}'),('${E2}','${emp(7)}');\n`;
+  await db.exec(seed);
+
+  // Alice bergabung via kode → jadi karyawan E1.
+  const join = await asUser(U.alice, `select public.join_employer('JOIN-E1') as emp`);
+  check('Karyawan bergabung via kode pemberi kerja', join.rows[0]?.emp === E1);
+
+  // Karyawan hanya melihat keikutsertaannya sendiri (bukan daftar rekan).
+  const mine = await asUser(U.alice, 'select employer_id from employer_enrollments');
+  check('Karyawan hanya melihat keikutsertaannya sendiri',
+    mine.rows.length === 1 && mine.rows[0].employer_id === E1);
+
+  // Admin pemberi kerja (Victor) melihat agregat E1 (>=5 peserta → tak disembunyikan).
+  const s1 = await asUser(U.victor,
+    `select participants, suppressed, active_wellness from public.employer_wellness_summary('${E1}')`);
+  check('Agregat E1 tidak disembunyikan (peserta cukup)', s1.rows[0]?.suppressed === false);
+  check('Agregat E1 hitung peserta (5 seed + Alice = 6)', Number(s1.rows[0]?.participants) === 6);
+  check('Agregat E1 hitung peserta wellness aktif (Alice)', Number(s1.rows[0]?.active_wellness) === 1);
+
+  // FIREWALL PRIVASI: admin pemberi kerja TIDAK bisa baca data kesehatan individu.
+  const h = await asUser(U.victor, `select id from health_readings where customer_id='${U.alice}'`);
+  check('Pemberi kerja TIDAK melihat reading kesehatan karyawan', h.rows.length === 0);
+  const w = await asUser(U.victor, `select id from wellness_enrollments where customer_id='${U.alice}'`);
+  check('Pemberi kerja TIDAK melihat wellness individu karyawan', w.rows.length === 0);
+
+  // k-anonimitas: E2 hanya 2 peserta → disembunyikan.
+  const s2 = await asUser(U.victor,
+    `select participants, suppressed, active_wellness from public.employer_wellness_summary('${E2}')`);
+  check('Agregat E2 disembunyikan (peserta < K=5)',
+    s2.rows[0]?.suppressed === true && s2.rows[0]?.active_wellness === null);
+
+  // Non-admin (Bob) tak mendapat agregat sama sekali.
+  const s3 = await asUser(U.bob, `select participants from public.employer_wellness_summary('${E1}')`);
+  check('Non-admin tidak mendapat agregat pemberi kerja', s3.rows.length === 0);
+
+  // Kode gabung: admin (Victor) mengatur; non-admin (Bob) ditolak.
+  const setC = await asUser(U.victor, `select public.set_employer_join_code('${E1}','Tim-X 01') as code`);
+  check('Admin pemberi kerja mengatur kode gabung (dinormalkan)', setC.rows[0]?.code === 'TIMX01');
+  const bobSet = await asUser(U.bob, `select public.set_employer_join_code('${E1}','curang') as code`);
+  check('Non-admin tidak bisa mengatur kode gabung', bobSet.rows[0]?.code == null);
+  // Karyawan baru bergabung dgn kode baru.
+  const j2 = await asUser(U.carol, `select public.join_employer('TIMX01') as emp`);
+  check('Kode baru dapat dipakai bergabung', j2.rows[0]?.emp === E1);
+}
+
 console.log(`\n=== RLS: ${passed} lulus, ${failed} gagal ===`);
 process.exit(failed === 0 ? 0 : 1);
