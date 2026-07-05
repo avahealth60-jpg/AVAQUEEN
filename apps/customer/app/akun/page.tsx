@@ -12,6 +12,8 @@ export const dynamic = 'force-dynamic';
 
 const FEATURES: { href: string; label: string; desc: string }[] = [
   { href: '/riwayat', label: 'Riwayat & tren', desc: 'Semua hasil pemeriksaan' },
+  { href: '/catat', label: 'Catat panel lengkap', desc: 'Isi banyak parameter sekaligus' },
+  { href: '/rewards', label: 'Lencana & rewards', desc: 'Pencapaian kebiasaan sehat' },
   { href: '/perangkat', label: 'Perangkat & smartwatch', desc: 'Hubungkan wearable, lihat tren' },
   { href: '/pendamping', label: 'Pendamping keluarga', desc: 'Berbagi & memantau' },
   { href: '/kerja', label: 'Wellness kantor', desc: 'Program pemberi kerja' },

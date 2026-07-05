@@ -440,6 +440,24 @@ export async function myEmployers(): Promise<EmployerMembershipView[]> {
   });
 }
 
+// ── Lencana / Rewards (E2) ───────────────────────────────────────
+export async function achievementStats(): Promise<{
+  readings: number; wellnessStreak: number; wearableConnected: boolean; premium: boolean; consultsCompleted: number;
+}> {
+  const { myConsultations } = await import('./consult');
+  const [rows, cards, conns, billing, consults] = await Promise.all([
+    readings(), wellnessDashboard(), wearableConnections(), billingSummary(), myConsultations(),
+  ]);
+  const wellnessStreak = cards.reduce((m, c) => Math.max(m, c.summary?.streak ?? 0), 0);
+  return {
+    readings: rows.length,
+    wellnessStreak,
+    wearableConnected: conns.some((c) => c.status === 'active'),
+    premium: billing.effective === 'premium',
+    consultsCompleted: consults.filter((c) => c.status === 'completed').length,
+  };
+}
+
 /** Nudge wellness "hidup" (dihitung, tidak disimpan) dari program aktif. */
 export async function liveWellnessNudges() {
   const cards = await wellnessDashboard();

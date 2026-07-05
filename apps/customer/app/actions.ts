@@ -150,6 +150,74 @@ export async function submitReading(
   };
 }
 
+// ── Panel multi-parameter (A4) ───────────────────────────────────
+export interface PanelItem { label: string; value: string; triage: Triage; }
+export interface PanelResult {
+  ok: boolean; message: string; items?: PanelItem[]; worst?: Triage; suggestConsultation?: boolean;
+}
+
+const PANEL_SINGLE: { key: 'glucose_fasting' | 'spo2' | 'heart_rate' | 'temperature'; label: string; unit: string }[] = [
+  { key: 'glucose_fasting', label: 'Gula darah puasa', unit: 'mg/dL' },
+  { key: 'spo2', label: 'SpO₂', unit: '%' },
+  { key: 'heart_rate', label: 'Detak jantung', unit: 'bpm' },
+  { key: 'temperature', label: 'Suhu tubuh', unit: '°C' },
+];
+const TRIAGE_RANK: Record<Triage, number> = { normal: 0, perhatian: 1, segera: 2 };
+
+/** Catat banyak parameter sekaligus → banyak reading + analisis, satu ringkasan. */
+export async function submitPanel(_prev: PanelResult | null, formData: FormData): Promise<PanelResult> {
+  const { userId } = await getCustomerAuth();
+  if (!userId) return { ok: false, message: 'Silakan masuk dulu.' };
+  const supabase = createClient();
+
+  const { data: consent } = await supabase
+    .from('consents').select('id').eq('purpose', CONSENT_PURPOSE).eq('status', 'granted').limit(1);
+  if (!consent || consent.length === 0) return { ok: false, message: 'Berikan persetujuan pemrosesan data dulu.' };
+
+  const items: PanelItem[] = [];
+  let worst: Triage = 'normal';
+
+  async function record(type: string, value: Record<string, number>, input: ReadingInput, label: string, shown: string) {
+    const { data: reading, error: rErr } = await supabase
+      .from('health_readings').insert({ customer_id: userId, reading_type: type, value, source: 'manual' })
+      .select('id').single();
+    if (rErr || !reading) throw new Error(rErr?.message ?? 'gagal simpan');
+    const draft = analyzeReading(input);
+    await supabase.from('analysis_results').insert({
+      reading_id: reading.id, triage: draft.triage, explanation: draft.explanation, disclaimer: draft.disclaimer,
+    });
+    items.push({ label: `${label}: ${shown}`, value: shown, triage: draft.triage });
+    if (TRIAGE_RANK[draft.triage] > TRIAGE_RANK[worst]) worst = draft.triage;
+  }
+
+  try {
+    for (const m of PANEL_SINGLE) {
+      const raw = String(formData.get(m.key) ?? '').trim();
+      if (!raw) continue;
+      const n = Number(raw);
+      if (!Number.isFinite(n)) continue;
+      await record(m.key, { value: n }, { type: m.key, value: n }, m.label, `${n} ${m.unit}`);
+    }
+    const sys = Number(formData.get('systolic'));
+    const dia = Number(formData.get('diastolic'));
+    if (Number.isFinite(sys) && Number.isFinite(dia)) {
+      await record('blood_pressure', { systolic: sys, diastolic: dia },
+        { type: 'blood_pressure', systolic: sys, diastolic: dia }, 'Tekanan darah', `${sys}/${dia} mmHg`);
+    }
+  } catch (e) {
+    return { ok: false, message: `Sebagian gagal disimpan: ${e instanceof Error ? e.message : String(e)}` };
+  }
+
+  if (items.length === 0) return { ok: false, message: 'Isi minimal satu parameter.' };
+  revalidatePath('/');
+  revalidatePath('/riwayat');
+  return {
+    ok: true,
+    message: `${items.length} parameter tersimpan.`,
+    items, worst, suggestConsultation: worst !== 'normal',
+  };
+}
+
 // ── Wearable / Smartwatch (Fase A) ───────────────────────────────
 export interface WearableResult { ok: boolean; message: string; }
 
