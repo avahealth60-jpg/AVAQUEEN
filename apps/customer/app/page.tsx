@@ -7,6 +7,7 @@ import { ConsentCard } from '../components/ConsentCard';
 import { ReadingForm } from '../components/ReadingForm';
 import { History } from '../components/History';
 import { ConnBanner } from '../components/ConnBanner';
+import { OnboardingHint } from '../components/OnboardingHint';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +48,8 @@ export default async function Home() {
         <ConsentCard />
       ) : (
         <>
+          <OnboardingHint />
+
           <Link
             href="/notifikasi"
             className="card"
