@@ -150,6 +150,36 @@ export async function submitReading(
   };
 }
 
+// ── Catat aktivitas manual (C3) ──────────────────────────────────
+export interface ActivityLogResult { ok: boolean; message: string; }
+const ACTIVITY_UNIT: Record<string, string> = {
+  steps: 'langkah', sleep_minutes: 'menit', active_minutes: 'menit',
+};
+
+/** Catat aktivitas gaya hidup manual (langkah/tidur/menit aktif) → memberi
+ *  makan program wellness, tanpa perlu wearable. Metrik gaya hidup TIDAK ditriase. */
+export async function logActivity(metric: string, value: number): Promise<ActivityLogResult> {
+  const { userId } = await getCustomerAuth();
+  if (!userId) return { ok: false, message: 'Silakan masuk dulu.' };
+  if (!ACTIVITY_UNIT[metric]) return { ok: false, message: 'Metrik tidak dikenal.' };
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return { ok: false, message: 'Isi angka yang valid.' };
+
+  const supabase = createClient();
+  const { data: consent } = await supabase
+    .from('consents').select('id').eq('purpose', CONSENT_PURPOSE).eq('status', 'granted').limit(1);
+  if (!consent || consent.length === 0) return { ok: false, message: 'Berikan persetujuan pemrosesan data dulu.' };
+
+  const { error } = await supabase.from('health_readings').insert({
+    customer_id: userId, reading_type: metric,
+    value: { value: n, kind: 'lifestyle' }, unit: ACTIVITY_UNIT[metric], source: 'manual',
+  });
+  if (error) return { ok: false, message: `Gagal mencatat: ${error.message}` };
+  revalidatePath('/perangkat');
+  revalidatePath('/wellness');
+  return { ok: true, message: 'Aktivitas tercatat.' };
+}
+
 // ── Panel multi-parameter (A4) ───────────────────────────────────
 export interface PanelItem { label: string; value: string; triage: Triage; }
 export interface PanelResult {

@@ -20,8 +20,34 @@ function ProgressBar({ percent, status }: { percent: number; status: string }) {
   );
 }
 
+function DailyBars({ daily, target }: { daily: { date: string; value: number }[]; target: number }) {
+  if (daily.length < 2) return null;
+  const max = Math.max(target, ...daily.map((d) => d.value)) || 1;
+  return (
+    <div style={{ marginTop: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 44, position: 'relative' }}>
+        {/* garis target */}
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: `${(target / max) * 100}%`, borderTop: '1px dashed var(--ava-color-trust-300)' }} />
+        {daily.map((d, i) => {
+          const met = d.value >= target;
+          return (
+            <div key={i} title={`${d.date}: ${d.value.toLocaleString('id-ID')}`}
+              style={{
+                flex: 1, height: `${Math.max(4, (d.value / max) * 100)}%`, borderRadius: 3,
+                background: met ? 'var(--normal)' : 'var(--ava-color-line-strong, #cbd5e1)',
+              }} />
+          );
+        })}
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--ava-color-ink-500)', marginTop: 4 }}>
+        {daily.length} hari terakhir · garis putus = target
+      </div>
+    </div>
+  );
+}
+
 export function WellnessCard({ card }: { card: ProgramCard }) {
-  const { program, enrolled, summary, todayCheckin } = card;
+  const { program, enrolled, summary, todayCheckin, daily, metToday } = card;
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [amount, setAmount] = useState('');
@@ -64,6 +90,14 @@ export function WellnessCard({ card }: { card: ProgramCard }) {
           <div style={{ fontSize: 12, color: 'var(--ava-color-ink-500)', marginTop: 6 }}>
             {summary.daysMetTarget} dari {summary.totalDays} hari memenuhi target · rekor {summary.bestStreak} hari
           </div>
+
+          <DailyBars daily={daily} target={program.dailyTarget} />
+
+          {!metToday && (
+            <div className="note" style={{ background: 'var(--brand-bg)', color: 'var(--brand-ink)', marginTop: 10 }}>
+              {isManual ? 'Belum check-in hari ini — yuk catat sekarang.' : 'Target hari ini belum tercapai — sedikit lagi!'}
+            </div>
+          )}
 
           {isManual && (
             <div className="row2" style={{ marginTop: 12, display: 'flex', gap: 8 }}>

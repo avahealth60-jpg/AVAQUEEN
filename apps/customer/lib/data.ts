@@ -6,6 +6,7 @@ import {
   listPrograms,
   summarizeProgress,
   isAutoTracked,
+  aggregateDaily,
   wellnessNudges,
   effectivePlan,
   type Triage,
@@ -204,6 +205,10 @@ export interface ProgramCard {
   summary: ProgressSummary | null;
   /** Total check-in hari ini (untuk metrik manual seperti hidrasi). */
   todayCheckin: number | null;
+  /** Nilai harian terkini (maks 14 hari) untuk grafik progres. */
+  daily: { date: string; value: number }[];
+  /** Sudah memenuhi target hari ini? (untuk pengingat). */
+  metToday: boolean;
 }
 
 export async function wellnessDashboard(): Promise<ProgramCard[]> {
@@ -218,17 +223,22 @@ export async function wellnessDashboard(): Promise<ProgramCard[]> {
     const active = !!e && e.status === 'active';
     let summary: ProgressSummary | null = null;
     let todayCheckin: number | null = null;
+    let daily: { date: string; value: number }[] = [];
+    let metToday = false;
     if (active) {
-      const daily = dailyValuesFor(program, allReadings, checkins);
       const mode: AggregateMode = program.metric === 'sleep_minutes' ? 'max' : 'sum';
-      summary = summarizeProgress(program.metric, program.dailyTarget, daily, mode);
+      const agg = aggregateDaily(dailyValuesFor(program, allReadings, checkins), mode);
+      daily = agg.slice(-14); // maksimal 14 hari terakhir
+      summary = summarizeProgress(program.metric, program.dailyTarget, agg, mode);
+      const todayVal = agg.find((d) => d.date === today)?.value ?? 0;
+      metToday = todayVal >= program.dailyTarget;
       if (!isAutoTracked(program.metric)) {
         todayCheckin = checkins
           .filter((c) => c.program_code === program.code && String(c.day).slice(0, 10) === today)
           .reduce((s, c) => s + Number(c.value), 0);
       }
     }
-    return { program, enrolled: active, status: e?.status ?? null, summary, todayCheckin };
+    return { program, enrolled: active, status: e?.status ?? null, summary, todayCheckin, daily, metToday };
   });
 }
 
