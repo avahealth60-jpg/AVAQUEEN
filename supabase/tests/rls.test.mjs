@@ -663,5 +663,27 @@ console.log('\n— Profil: customer edit profilnya, TAPI tak bisa eskalasi peran
   check('Customer tak bisa mengubah profil orang lain', cross);
 }
 
+console.log('\n— Push: langganan notifikasi terisolasi per pemilik —');
+{
+  await asUser(U.alice,
+    `insert into push_subscriptions(customer_id, endpoint, p256dh, auth) values ('${U.alice}','https://push/alice','k1','a1')`);
+  await asUser(U.bob,
+    `insert into push_subscriptions(customer_id, endpoint, p256dh, auth) values ('${U.bob}','https://push/bob','k2','a2')`);
+
+  const mine = await asUser(U.alice, 'select endpoint from push_subscriptions');
+  check('Alice hanya melihat langganan push-nya sendiri',
+    mine.rows.length === 1 && mine.rows[0].endpoint === 'https://push/alice');
+
+  let forged = false;
+  try {
+    await asUser(U.alice,
+      `insert into push_subscriptions(customer_id, endpoint, p256dh, auth) values ('${U.bob}','https://push/x','k','a')`);
+  } catch { forged = true; }
+  check('Alice TIDAK bisa membuat langganan atas nama Bob (WITH CHECK)', forged);
+
+  const bobPeek = await asUser(U.alice, `select id from push_subscriptions where customer_id='${U.bob}'`);
+  check('Alice TIDAK melihat langganan push Bob', bobPeek.rows.length === 0);
+}
+
 console.log(`\n=== RLS: ${passed} lulus, ${failed} gagal ===`);
 process.exit(failed === 0 ? 0 : 1);
