@@ -19,6 +19,8 @@ export async function DoctorDashboard({ name }: { name: string | null }) {
   const [list, earn] = await Promise.all([doctorConsultations(), doctorEarnings()]);
   const active = list.filter((c) => c.status === 'requested' || c.status === 'confirmed');
   const past = list.filter((c) => c.status === 'completed' || c.status === 'cancelled');
+  const rated = list.filter((c) => c.rating != null);
+  const avgRating = rated.length ? (rated.reduce((s, c) => s + (c.rating ?? 0), 0) / rated.length) : null;
 
   return (
     <>
@@ -29,6 +31,7 @@ export async function DoctorDashboard({ name }: { name: string | null }) {
         <div className="tile"><div className="tile__label">Permintaan & terjadwal</div><div className="tile__num">{active.length}</div></div>
         <div className="tile"><div className="tile__label">Selesai</div><div className="tile__num">{earn.completed}</div></div>
         <div className="tile"><div className="tile__label">Pendapatan bersih</div><div className="tile__num" style={{ fontSize: 22 }}>{rupiah(earn.net)}</div></div>
+        <div className="tile"><div className="tile__label">Rating rata-rata</div><div className="tile__num">{avgRating ? `★ ${avgRating.toFixed(1)}` : '—'}</div></div>
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>

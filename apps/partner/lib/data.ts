@@ -56,6 +56,37 @@ export async function vendorOrders(): Promise<VendorOrder[]> {
   }));
 }
 
+// ── Lab: riwayat kalibrasi ───────────────────────────────────────
+export interface CalibrationRow {
+  id: string; serial: string; performedAt: string; nextDueAt: string;
+  result: 'lulus' | 'perlu_tinjau' | 'gagal' | null; certificateUrl: string | null;
+}
+export async function labCalibrationHistory(): Promise<CalibrationRow[]> {
+  const supabase = createClient();
+  // RLS "lab manages own calibrations" → hanya kalibrasi lab ini.
+  const { data: cals } = await supabase
+    .from('calibrations').select('id, device_id, performed_at, next_due_at, certificate_url')
+    .order('performed_at', { ascending: false }).limit(100);
+  const rows = (cals ?? []) as { id: string; device_id: string; performed_at: string; next_due_at: string; certificate_url: string | null }[];
+  if (rows.length === 0) return [];
+
+  const calIds = rows.map((c) => c.id);
+  const devIds = [...new Set(rows.map((c) => c.device_id))];
+  const [qcRes, devRes] = await Promise.all([
+    supabase.from('qc_results').select('calibration_id, result').in('calibration_id', calIds),
+    supabase.from('devices').select('id, serial').in('id', devIds),
+  ]);
+  const qc = new Map(((qcRes.data ?? []) as { calibration_id: string; result: string }[]).map((q) => [q.calibration_id, q.result]));
+  const serial = new Map(((devRes.data ?? []) as { id: string; serial: string }[]).map((d) => [d.id, d.serial]));
+
+  return rows.map((c) => ({
+    id: c.id, serial: serial.get(c.device_id) ?? '—',
+    performedAt: c.performed_at, nextDueAt: c.next_due_at,
+    result: (qc.get(c.id) as 'lulus' | 'perlu_tinjau' | 'gagal' | undefined) ?? null,
+    certificateUrl: c.certificate_url,
+  }));
+}
+
 export interface LabDeviceRow {
   id: string;
   serial: string;
