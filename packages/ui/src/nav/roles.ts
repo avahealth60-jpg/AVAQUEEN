@@ -13,6 +13,7 @@ export const customerNav: RoleNav = {
   tagline: 'Hasil pemeriksaan jadi pemahaman, lalu tindakan.',
   items: [
     { id: 'beranda', label: 'Beranda', href: '/', icon: 'Home', description: 'Ringkasan kesehatan, catat pemeriksaan & riwayat.' },
+    { id: 'catat', label: 'Catat panel', href: '/catat', icon: 'ClipboardPlus', description: 'Isi banyak parameter pemeriksaan sekaligus.' },
     { id: 'riwayat', label: 'Riwayat', href: '/riwayat', icon: 'TrendingUp', description: 'Riwayat & tren pemeriksaan lintas waktu.' },
     { id: 'wellness', label: 'Wellness', href: '/wellness', icon: 'Sprout', description: 'Program & kebiasaan sehat harian.', isNew: true },
     { id: 'toko', label: 'Toko', href: '/toko', icon: 'ShoppingBag', description: 'Alat kesehatan ber-badge AVA Verified.', isNew: true },
@@ -20,6 +21,7 @@ export const customerNav: RoleNav = {
     { id: 'konsultasi', label: 'Konsultasi', href: '/konsultasi', icon: 'Video', description: 'Telemedicine dengan dokter terverifikasi.' },
     { id: 'pendamping', label: 'Pendamping', href: '/pendamping', icon: 'Users', description: 'Berbagi kondisimu ke keluarga, atau pantau mereka.', isNew: true },
     { id: 'kerja', label: 'Kantor', href: '/kerja', icon: 'Building2', description: 'Program wellness dari pemberi kerja.', isNew: true },
+    { id: 'rewards', label: 'Rewards', href: '/rewards', icon: 'Gift', description: 'Lencana & pencapaian dari kebiasaan sehatmu.', isNew: true },
     { id: 'langganan', label: 'Langganan', href: '/langganan', icon: 'Sparkles', description: 'Paket Premium: diskon konsultasi & lebih banyak.' },
     { id: 'notifikasi', label: 'Notifikasi', href: '/notifikasi', icon: 'Bell', description: 'Pengingat, nudge, & alert pendamping.' },
     { id: 'akun', label: 'Akun', href: '/akun', icon: 'UserCog', description: 'Kelola consent, data, dan profil.' },

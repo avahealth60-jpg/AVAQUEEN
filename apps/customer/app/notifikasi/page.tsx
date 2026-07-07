@@ -5,6 +5,7 @@ import { getCustomerAuth } from '../../lib/auth';
 import { notifications } from '../../lib/data';
 import { ConnBanner } from '../../components/ConnBanner';
 import { NotificationList } from '../../components/NotificationList';
+import { PushToggle } from '../../components/PushToggle';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +32,8 @@ export default async function NotifikasiPage() {
           Kotak masuk
         </h1>
       </header>
+
+      <PushToggle />
 
       <NotificationList items={items} />
 

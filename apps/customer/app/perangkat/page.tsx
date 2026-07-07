@@ -5,6 +5,7 @@ import { getCustomerAuth } from '../../lib/auth';
 import { wearableConnections, wearableTrends } from '../../lib/data';
 import { ConnBanner } from '../../components/ConnBanner';
 import { WearableConnect } from '../../components/WearableConnect';
+import { ManualActivityForm } from '../../components/ManualActivityForm';
 import { Sparkline } from '../../components/widgets';
 
 export const dynamic = 'force-dynamic';
@@ -40,6 +41,9 @@ export default async function PerangkatPage() {
       </header>
 
       <WearableConnect connectedProviders={active.map((c) => c.provider)} />
+
+      <div className="section-h">Tanpa perangkat?</div>
+      <ManualActivityForm />
 
       {active.length > 0 && (
         <>

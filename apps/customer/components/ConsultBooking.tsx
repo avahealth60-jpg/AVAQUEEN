@@ -10,9 +10,9 @@ function SubmitBtn() {
   return <button className="btn" type="submit" disabled={pending}>{pending ? 'Mengirim…' : 'Minta konsultasi'}</button>;
 }
 
-export function ConsultBooking({ doctors, readings }: { doctors: DoctorOption[]; readings: ReadingOption[] }) {
+export function ConsultBooking({ doctors, readings, preselect }: { doctors: DoctorOption[]; readings: ReadingOption[]; preselect?: string }) {
   const [state, action] = useFormState<BookResult | null, FormData>(bookConsultation, null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(Boolean(preselect));
 
   if (doctors.length === 0) {
     return <div className="empty"><strong>Belum ada dokter tersedia</strong>Dokter ditambahkan oleh admin AVA.</div>;
@@ -41,7 +41,7 @@ export function ConsultBooking({ doctors, readings }: { doctors: DoctorOption[];
           <div className="checks">
             {readings.map((r) => (
               <label key={r.id} className="check">
-                <input type="checkbox" name="reading" value={r.id} />
+                <input type="checkbox" name="reading" value={r.id} defaultChecked={r.id === preselect} />
                 <span>{r.label} · <strong>{r.display}</strong> <span className="muted">{fmt(r.takenAt)}</span></span>
               </label>
             ))}

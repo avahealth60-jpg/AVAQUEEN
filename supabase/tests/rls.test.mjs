@@ -663,5 +663,140 @@ console.log('\n— Profil: customer edit profilnya, TAPI tak bisa eskalasi peran
   check('Customer tak bisa mengubah profil orang lain', cross);
 }
 
+console.log('\n— Push: langganan notifikasi terisolasi per pemilik —');
+{
+  await asUser(U.alice,
+    `insert into push_subscriptions(customer_id, endpoint, p256dh, auth) values ('${U.alice}','https://push/alice','k1','a1')`);
+  await asUser(U.bob,
+    `insert into push_subscriptions(customer_id, endpoint, p256dh, auth) values ('${U.bob}','https://push/bob','k2','a2')`);
+
+  const mine = await asUser(U.alice, 'select endpoint from push_subscriptions');
+  check('Alice hanya melihat langganan push-nya sendiri',
+    mine.rows.length === 1 && mine.rows[0].endpoint === 'https://push/alice');
+
+  let forged = false;
+  try {
+    await asUser(U.alice,
+      `insert into push_subscriptions(customer_id, endpoint, p256dh, auth) values ('${U.bob}','https://push/x','k','a')`);
+  } catch { forged = true; }
+  check('Alice TIDAK bisa membuat langganan atas nama Bob (WITH CHECK)', forged);
+
+  const bobPeek = await asUser(U.alice, `select id from push_subscriptions where customer_id='${U.bob}'`);
+  check('Alice TIDAK melihat langganan push Bob', bobPeek.rows.length === 0);
+}
+
+console.log('\n— Chat konsultasi: hanya peserta boleh baca & kirim —');
+{
+  // Konsultasi Alice↔Carol sudah ada (eeeeeeee-...-001). Bob bukan peserta.
+  const CID = 'eeeeeeee-0000-0000-0000-000000000001';
+  await asUser(U.alice, `insert into consultation_messages(consultation_id, sender_id, body) values ('${CID}','${U.alice}','Halo dok')`);
+  await asUser(U.carol, `insert into consultation_messages(consultation_id, sender_id, body) values ('${CID}','${U.carol}','Halo, ada keluhan?')`);
+
+  const aliceSees = await asUser(U.alice, `select body from consultation_messages where consultation_id='${CID}'`);
+  check('Pasien membaca percakapan konsultasinya', aliceSees.rows.length === 2);
+  const carolSees = await asUser(U.carol, `select body from consultation_messages where consultation_id='${CID}'`);
+  check('Dokter membaca percakapan konsultasinya', carolSees.rows.length === 2);
+
+  // Bob (bukan peserta) tak melihat pesan.
+  const bobSees = await asUser(U.bob, `select id from consultation_messages where consultation_id='${CID}'`);
+  check('Non-peserta TIDAK melihat pesan konsultasi', bobSees.rows.length === 0);
+
+  // Bob tak bisa mengirim pesan ke konsultasi orang.
+  let bobSend = false;
+  try {
+    await asUser(U.bob, `insert into consultation_messages(consultation_id, sender_id, body) values ('${CID}','${U.bob}','nyelonong')`);
+  } catch { bobSend = true; }
+  check('Non-peserta TIDAK bisa mengirim pesan', bobSend);
+
+  // Alice tak bisa mengirim atas nama Carol (sender_id != auth.uid()).
+  let spoof = false;
+  try {
+    await asUser(U.alice, `insert into consultation_messages(consultation_id, sender_id, body) values ('${CID}','${U.carol}','pura-pura dokter')`);
+  } catch { spoof = true; }
+  check('Tak bisa mengirim atas nama peserta lain (sender terikat auth)', spoof);
+}
+
+console.log('\n— Fulfillment: vendor mengubah status order-nya, bukan vendor lain —');
+{
+  const OID = '0dd00000-0000-0000-0000-000000000001'; // order Alice (item vendor V1), sudah 'paid'
+  // Vendor V2 (Victor) BUKAN vendor order ini → ditolak.
+  const v2 = await asUser(U.victor, `select public.vendor_set_order_status('${OID}','shipped') as ok`);
+  check('Vendor lain TIDAK bisa mengubah status order', v2.rows[0]?.ok === false);
+
+  // Vendor V1 (Vance) → paid → shipped (sah).
+  const v1 = await asUser(U.vance, `select public.vendor_set_order_status('${OID}','shipped') as ok`);
+  check('Vendor pemilik item mengubah paid → shipped', v1.rows[0]?.ok === true);
+  const st = await asUser(U.vance, `select status from orders where id='${OID}'`);
+  check('Status order menjadi shipped', st.rows[0]?.status === 'shipped');
+
+  // Transisi tak sah shipped → paid ditolak.
+  const bad = await asUser(U.vance, `select public.vendor_set_order_status('${OID}','paid') as ok`);
+  check('Transisi order tak sah ditolak', bad.rows[0]?.ok === false);
+
+  // shipped → delivered (sah).
+  const del = await asUser(U.vance, `select public.vendor_set_order_status('${OID}','delivered') as ok`);
+  check('Vendor menyelesaikan shipped → delivered', del.rows[0]?.ok === true);
+}
+
+console.log('\n— Faskes: dokter gabung; admin lihat agregat, BUKAN data pasien —');
+{
+  const FID = 'fafafafa-0000-0000-0000-000000000001';
+  const FADMIN = 'fadfadfa-0000-0000-0000-000000000001';
+  // Setup superuser: faskes + admin faskes (anggota) + kode gabung.
+  await db.exec(`
+    insert into profiles(id, role, full_name) values ('${FADMIN}','faskes_admin','Admin Klinik');
+    insert into organizations(id, name, kind, join_code) values ('${FID}','Klinik Sehat','faskes','FASKES1');
+    insert into organization_members(organization_id, profile_id) values ('${FID}','${FADMIN}');
+  `);
+
+  // Carol (dokter) bergabung via kode.
+  const j = await asUser(U.carol, `select public.join_faskes('FASKES1') as fid`);
+  check('Dokter bergabung ke faskes via kode', j.rows[0]?.fid === FID);
+
+  // Non-dokter (Alice) tak bisa bergabung.
+  const jAlice = await asUser(U.alice, `select public.join_faskes('FASKES1') as fid`);
+  check('Non-dokter tidak bisa bergabung ke faskes', jAlice.rows[0]?.fid == null);
+
+  // Admin faskis melihat sesama anggota (dokternya).
+  const mem = await asUser(U.carol, `select organization_id from organization_members where organization_id='${FID}'`);
+  check('Anggota melihat sesama anggota faskes', mem.rows.length >= 1);
+
+  // Admin faskes: ringkasan agregat (Carol punya 1 konsultasi dgn Alice).
+  const s = await asUser(FADMIN, `select doctors, consultations from public.faskes_summary('${FID}')`);
+  check('Admin faskes melihat agregat (>=1 dokter, ada konsultasi)',
+    Number(s.rows[0]?.doctors) >= 1 && Number(s.rows[0]?.consultations) >= 1);
+
+  // FIREWALL: admin faskes TIDAK melihat isi konsultasi / reading pasien.
+  const cons = await asUser(FADMIN, `select id from consultations`);
+  check('Admin faskes TIDAK melihat baris konsultasi (RLS)', cons.rows.length === 0);
+  const reads = await asUser(FADMIN, `select id from health_readings`);
+  check('Admin faskes TIDAK melihat reading pasien', reads.rows.length === 0);
+
+  // Non-anggota (Bob) tak dapat agregat.
+  const s2 = await asUser(U.bob, `select doctors from public.faskes_summary('${FID}')`);
+  check('Non-anggota tidak mendapat agregat faskes', s2.rows.length === 0);
+}
+
+console.log('\n— Verifikasi dokter: dokter isi STR/SIP, hanya ADMIN memverifikasi —');
+{
+  // Carol (dokter) mengisi STR/SIP-nya (boleh) tapi coba self-verify (diblokir).
+  await asUser(U.carol, `update profiles set str_no='STR-123', sip_no='SIP-456', doctor_status='verified' where id='${U.carol}'`);
+  const self = await asUser(U.carol, `select str_no, doctor_status from profiles where id='${U.carol}'`);
+  check('Dokter bisa mengisi STR/SIP', self.rows[0]?.str_no === 'STR-123');
+  check('Dokter TIDAK bisa memverifikasi dirinya sendiri', self.rows[0]?.doctor_status === 'pending');
+
+  // Non-admin (Bob) tak bisa memverifikasi lewat fungsi.
+  const bob = await asUser(U.bob, `select public.set_doctor_verification('${U.carol}','verified') as ok`);
+  check('Non-admin tidak bisa memverifikasi dokter', bob.rows[0]?.ok === false);
+
+  // Admin (perlu user ava_admin). Buat admin sementara.
+  const ADM = 'adadadad-0000-0000-0000-000000000001';
+  await db.exec(`insert into profiles(id, role, full_name) values ('${ADM}','ava_admin','AVA Admin')`);
+  const adm = await asUser(ADM, `select public.set_doctor_verification('${U.carol}','verified') as ok`);
+  check('Admin memverifikasi dokter', adm.rows[0]?.ok === true);
+  const after = await asUser(U.carol, `select doctor_status from profiles where id='${U.carol}'`);
+  check('Status dokter menjadi verified', after.rows[0]?.doctor_status === 'verified');
+}
+
 console.log(`\n=== RLS: ${passed} lulus, ${failed} gagal ===`);
 process.exit(failed === 0 ? 0 : 1);

@@ -65,8 +65,10 @@ export function ReadingForm() {
           )}
           {state.suggestConsultation && (
             <div className="result__cta">
-              <Link className="btn btn--ghost" href="/konsultasi" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>
-                Pertimbangkan konsultasi dengan dokter
+              <Link className="btn btn--ghost"
+                href={state.readingId ? `/konsultasi?share=${state.readingId}` : '/konsultasi'}
+                style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>
+                Konsultasi dengan dokter (hasil ini otomatis dibagikan)
               </Link>
             </div>
           )}

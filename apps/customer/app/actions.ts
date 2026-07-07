@@ -72,6 +72,7 @@ export interface SubmitResult {
   explanation?: string;
   disclaimer?: string;
   suggestConsultation?: boolean;
+  readingId?: string;
   // Evaluasi komprehensif dari basis pengetahuan terkurasi (bila tersedia).
   artinya?: string;
   penyebab?: string;
@@ -143,10 +144,109 @@ export async function submitReading(
     explanation: draft.explanation,
     disclaimer: draft.disclaimer,
     suggestConsultation: draft.suggest_consultation,
+    readingId: reading.id,
     artinya: knowledge?.artinya,
     penyebab: knowledge?.penyebab ?? undefined,
     saran: knowledge?.saran ?? undefined,
     kapanKeDokter: knowledge?.kapanKeDokter ?? undefined,
+  };
+}
+
+// ── Catat aktivitas manual (C3) ──────────────────────────────────
+export interface ActivityLogResult { ok: boolean; message: string; }
+const ACTIVITY_UNIT: Record<string, string> = {
+  steps: 'langkah', sleep_minutes: 'menit', active_minutes: 'menit',
+};
+
+/** Catat aktivitas gaya hidup manual (langkah/tidur/menit aktif) → memberi
+ *  makan program wellness, tanpa perlu wearable. Metrik gaya hidup TIDAK ditriase. */
+export async function logActivity(metric: string, value: number): Promise<ActivityLogResult> {
+  const { userId } = await getCustomerAuth();
+  if (!userId) return { ok: false, message: 'Silakan masuk dulu.' };
+  if (!ACTIVITY_UNIT[metric]) return { ok: false, message: 'Metrik tidak dikenal.' };
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return { ok: false, message: 'Isi angka yang valid.' };
+
+  const supabase = createClient();
+  const { data: consent } = await supabase
+    .from('consents').select('id').eq('purpose', CONSENT_PURPOSE).eq('status', 'granted').limit(1);
+  if (!consent || consent.length === 0) return { ok: false, message: 'Berikan persetujuan pemrosesan data dulu.' };
+
+  const { error } = await supabase.from('health_readings').insert({
+    customer_id: userId, reading_type: metric,
+    value: { value: n, kind: 'lifestyle' }, unit: ACTIVITY_UNIT[metric], source: 'manual',
+  });
+  if (error) return { ok: false, message: `Gagal mencatat: ${error.message}` };
+  revalidatePath('/perangkat');
+  revalidatePath('/wellness');
+  return { ok: true, message: 'Aktivitas tercatat.' };
+}
+
+// ── Panel multi-parameter (A4) ───────────────────────────────────
+export interface PanelItem { label: string; value: string; triage: Triage; }
+export interface PanelResult {
+  ok: boolean; message: string; items?: PanelItem[]; worst?: Triage; suggestConsultation?: boolean;
+}
+
+const PANEL_SINGLE: { key: 'glucose_fasting' | 'spo2' | 'heart_rate' | 'temperature'; label: string; unit: string }[] = [
+  { key: 'glucose_fasting', label: 'Gula darah puasa', unit: 'mg/dL' },
+  { key: 'spo2', label: 'SpO₂', unit: '%' },
+  { key: 'heart_rate', label: 'Detak jantung', unit: 'bpm' },
+  { key: 'temperature', label: 'Suhu tubuh', unit: '°C' },
+];
+const TRIAGE_RANK: Record<Triage, number> = { normal: 0, perhatian: 1, segera: 2 };
+
+/** Catat banyak parameter sekaligus → banyak reading + analisis, satu ringkasan. */
+export async function submitPanel(_prev: PanelResult | null, formData: FormData): Promise<PanelResult> {
+  const { userId } = await getCustomerAuth();
+  if (!userId) return { ok: false, message: 'Silakan masuk dulu.' };
+  const supabase = createClient();
+
+  const { data: consent } = await supabase
+    .from('consents').select('id').eq('purpose', CONSENT_PURPOSE).eq('status', 'granted').limit(1);
+  if (!consent || consent.length === 0) return { ok: false, message: 'Berikan persetujuan pemrosesan data dulu.' };
+
+  const items: PanelItem[] = [];
+  let worst: Triage = 'normal';
+
+  async function record(type: string, value: Record<string, number>, input: ReadingInput, label: string, shown: string) {
+    const { data: reading, error: rErr } = await supabase
+      .from('health_readings').insert({ customer_id: userId, reading_type: type, value, source: 'manual' })
+      .select('id').single();
+    if (rErr || !reading) throw new Error(rErr?.message ?? 'gagal simpan');
+    const draft = analyzeReading(input);
+    await supabase.from('analysis_results').insert({
+      reading_id: reading.id, triage: draft.triage, explanation: draft.explanation, disclaimer: draft.disclaimer,
+    });
+    items.push({ label: `${label}: ${shown}`, value: shown, triage: draft.triage });
+    if (TRIAGE_RANK[draft.triage] > TRIAGE_RANK[worst]) worst = draft.triage;
+  }
+
+  try {
+    for (const m of PANEL_SINGLE) {
+      const raw = String(formData.get(m.key) ?? '').trim();
+      if (!raw) continue;
+      const n = Number(raw);
+      if (!Number.isFinite(n)) continue;
+      await record(m.key, { value: n }, { type: m.key, value: n }, m.label, `${n} ${m.unit}`);
+    }
+    const sys = Number(formData.get('systolic'));
+    const dia = Number(formData.get('diastolic'));
+    if (Number.isFinite(sys) && Number.isFinite(dia)) {
+      await record('blood_pressure', { systolic: sys, diastolic: dia },
+        { type: 'blood_pressure', systolic: sys, diastolic: dia }, 'Tekanan darah', `${sys}/${dia} mmHg`);
+    }
+  } catch (e) {
+    return { ok: false, message: `Sebagian gagal disimpan: ${e instanceof Error ? e.message : String(e)}` };
+  }
+
+  if (items.length === 0) return { ok: false, message: 'Isi minimal satu parameter.' };
+  revalidatePath('/');
+  revalidatePath('/riwayat');
+  return {
+    ok: true,
+    message: `${items.length} parameter tersimpan.`,
+    items, worst, suggestConsultation: worst !== 'normal',
   };
 }
 
@@ -426,6 +526,34 @@ export async function leaveCaregiver(linkId: string): Promise<CaregiverActionRes
   if (error) return { ok: false, message: error.message };
   revalidatePath('/pendamping');
   return { ok: true, message: 'Kamu berhenti mendampingi.' };
+}
+
+// ── Web Push (E1) ────────────────────────────────────────────────
+export interface PushResult { ok: boolean; message: string; }
+
+export async function savePushSubscription(sub: { endpoint: string; p256dh: string; auth: string }): Promise<PushResult> {
+  const { userId } = await getCustomerAuth();
+  if (!userId) return { ok: false, message: 'Silakan masuk dulu.' };
+  if (!sub?.endpoint || !sub.p256dh || !sub.auth) return { ok: false, message: 'Langganan tidak valid.' };
+  const supabase = createClient();
+  const { error } = await supabase.from('push_subscriptions').upsert(
+    { customer_id: userId, endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth },
+    { onConflict: 'endpoint' },
+  );
+  if (error) return { ok: false, message: `Gagal menyimpan: ${error.message}` };
+  revalidatePath('/notifikasi');
+  return { ok: true, message: 'Notifikasi push aktif.' };
+}
+
+export async function removePushSubscription(endpoint: string): Promise<PushResult> {
+  const { userId } = await getCustomerAuth();
+  if (!userId) return { ok: false, message: 'Silakan masuk dulu.' };
+  const supabase = createClient();
+  const { error } = await supabase.from('push_subscriptions')
+    .delete().eq('endpoint', endpoint).eq('customer_id', userId);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath('/notifikasi');
+  return { ok: true, message: 'Notifikasi push dimatikan.' };
 }
 
 // ── Notifikasi (Fase C) ──────────────────────────────────────────
@@ -718,6 +846,49 @@ export async function bookConsultation(
   revalidatePath('/konsultasi');
   const hemat = pricing.discount > 0 ? ` (hemat Rp${pricing.discount.toLocaleString('id-ID')} berkat Premium)` : '';
   return { ok: true, message: `Permintaan konsultasi terkirim${hemat}. Menunggu konfirmasi dokter.` };
+}
+
+export async function rateConsultation(id: string, rating: number, comment: string): Promise<BookResult> {
+  const { userId } = await getCustomerAuth();
+  if (!userId) return { ok: false, message: 'Silakan masuk dulu.' };
+  const r = Math.trunc(Number(rating));
+  if (r < 1 || r > 5) return { ok: false, message: 'Beri rating 1–5.' };
+  const supabase = createClient();
+  const { error } = await supabase.from('consultations')
+    .update({ rating: r, rating_comment: comment.trim() || null })
+    .eq('id', id).eq('customer_id', userId);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath('/konsultasi');
+  return { ok: true, message: 'Terima kasih atas penilaianmu!' };
+}
+
+// ── Chat konsultasi (D2) ─────────────────────────────────────────
+export interface ChatMessage { id: string; body: string; createdAt: string; mine: boolean; }
+
+export async function fetchConsultMessages(consultationId: string): Promise<ChatMessage[]> {
+  const { userId } = await getCustomerAuth();
+  if (!userId) return [];
+  const supabase = createClient();
+  const { data } = await supabase
+    .from('consultation_messages')
+    .select('id, sender_id, body, created_at')
+    .eq('consultation_id', consultationId)
+    .order('created_at', { ascending: true });
+  return ((data ?? []) as any[]).map((m) => ({
+    id: m.id, body: m.body, createdAt: m.created_at, mine: m.sender_id === userId,
+  }));
+}
+
+export async function sendConsultMessage(consultationId: string, body: string): Promise<{ ok: boolean; message: string }> {
+  const { userId } = await getCustomerAuth();
+  if (!userId) return { ok: false, message: 'Silakan masuk dulu.' };
+  const t = body.trim();
+  if (!t) return { ok: false, message: 'Pesan kosong.' };
+  const supabase = createClient();
+  const { error } = await supabase.from('consultation_messages')
+    .insert({ consultation_id: consultationId, sender_id: userId, body: t });
+  if (error) return { ok: false, message: error.message };
+  return { ok: true, message: '' };
 }
 
 export async function cancelConsultation(id: string): Promise<BookResult> {

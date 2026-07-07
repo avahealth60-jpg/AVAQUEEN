@@ -100,6 +100,36 @@ export async function submitCalibration(
   };
 }
 
+// ── Chat konsultasi (D2, sisi dokter) ────────────────────────────
+export interface ChatMessage { id: string; body: string; createdAt: string; mine: boolean; }
+
+export async function fetchConsultMessages(consultationId: string): Promise<ChatMessage[]> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data } = await supabase
+    .from('consultation_messages')
+    .select('id, sender_id, body, created_at')
+    .eq('consultation_id', consultationId)
+    .order('created_at', { ascending: true });
+  return ((data ?? []) as { id: string; sender_id: string; body: string; created_at: string }[])
+    .map((m) => ({ id: m.id, body: m.body, createdAt: m.created_at, mine: m.sender_id === user.id }));
+}
+
+export async function sendConsultMessage(consultationId: string, body: string): Promise<{ ok: boolean; message: string }> {
+  const auth = await getPartnerAuth();
+  if (auth.role !== 'doctor') return { ok: false, message: 'Hanya dokter yang dapat mengirim.' };
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: 'Silakan masuk dulu.' };
+  const t = body.trim();
+  if (!t) return { ok: false, message: 'Pesan kosong.' };
+  const { error } = await supabase.from('consultation_messages')
+    .insert({ consultation_id: consultationId, sender_id: user.id, body: t });
+  if (error) return { ok: false, message: error.message };
+  return { ok: true, message: '' };
+}
+
 // ── Marketplace (sisi vendor) ────────────────────────────────────
 /** Vendor memasang listing alat ke etalase. Verifikasi "AVA Verified"
  *  diturunkan otomatis dari badge aktif (fungsi verified_listing_ids). */
@@ -157,6 +187,82 @@ export async function setJoinCode(
   if (!data) return { ok: false, message: 'Tidak berwenang mengatur kode.' };
   revalidatePath('/');
   return { ok: true, message: 'Kode gabung diperbarui.', code: data as string };
+}
+
+/** Vendor mengubah status pemenuhan pesanan (paid→shipped→delivered / cancel). */
+export async function setOrderStatus(orderId: string, status: string): Promise<ActionResult> {
+  const auth = await getPartnerAuth();
+  if (auth.role !== 'vendor') return { ok: false, message: 'Hanya vendor.' };
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('vendor_set_order_status', { p_order: orderId, p_status: status });
+  if (error) return { ok: false, message: error.message };
+  if (!data) return { ok: false, message: 'Perubahan status tidak diizinkan.' };
+  revalidatePath('/');
+  const LABEL: Record<string, string> = { shipped: 'dikirim', delivered: 'diterima', cancelled: 'dibatalkan' };
+  return { ok: true, message: `Pesanan ${LABEL[status] ?? status}.` };
+}
+
+/** Vendor menyalakan/mematikan listing (RLS "vendor manages own listings"). */
+export async function toggleListing(listingId: string, active: boolean): Promise<ActionResult> {
+  const auth = await getPartnerAuth();
+  if (auth.role !== 'vendor') return { ok: false, message: 'Hanya vendor.' };
+  const supabase = createClient();
+  const { error } = await supabase.from('product_listings')
+    .update({ status: active ? 'active' : 'inactive' }).eq('id', listingId);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath('/');
+  return { ok: true, message: active ? 'Listing ditayangkan.' : 'Listing disembunyikan.' };
+}
+
+export async function updateListingStock(listingId: string, stock: number): Promise<ActionResult> {
+  const auth = await getPartnerAuth();
+  if (auth.role !== 'vendor') return { ok: false, message: 'Hanya vendor.' };
+  const s = Math.trunc(Number(stock));
+  if (!Number.isInteger(s) || s < 0) return { ok: false, message: 'Stok tidak valid.' };
+  const supabase = createClient();
+  const { error } = await supabase.from('product_listings').update({ stock: s }).eq('id', listingId);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath('/');
+  return { ok: true, message: 'Stok diperbarui.' };
+}
+
+// ── Kredensial dokter (STR/SIP) ──────────────────────────────────
+export async function saveDoctorCredentials(strNo: string, sipNo: string): Promise<ActionResult> {
+  const auth = await getPartnerAuth();
+  if (auth.role !== 'doctor') return { ok: false, message: 'Hanya dokter.' };
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: 'Silakan masuk dulu.' };
+  const { error } = await supabase.from('profiles')
+    .update({ str_no: strNo.trim() || null, sip_no: sipNo.trim() || null }).eq('id', user.id);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath('/');
+  return { ok: true, message: 'Kredensial tersimpan. Menunggu verifikasi admin.' };
+}
+
+// ── Faskes ───────────────────────────────────────────────────────
+export async function setFaskesJoinCode(_prev: JoinCodeResult | null, formData: FormData): Promise<JoinCodeResult> {
+  const auth = await getPartnerAuth();
+  if (auth.org?.kind !== 'faskes') return { ok: false, message: 'Hanya admin faskes.' };
+  const code = String(formData.get('code') ?? '').trim();
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('faskes_set_join_code', { p_faskes: auth.org.id, p_code: code });
+  if (error) return { ok: false, message: `Gagal: ${error.message}` };
+  if (!data) return { ok: false, message: 'Tidak berwenang.' };
+  revalidatePath('/');
+  return { ok: true, message: 'Kode gabung dokter diperbarui.', code: data as string };
+}
+
+/** Dokter bergabung ke faskes via kode. */
+export async function joinFaskes(code: string): Promise<ActionResult> {
+  const auth = await getPartnerAuth();
+  if (auth.role !== 'doctor') return { ok: false, message: 'Hanya dokter yang dapat bergabung.' };
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('join_faskes', { code: code.trim() });
+  if (error) return { ok: false, message: `Gagal: ${error.message}` };
+  if (!data) return { ok: false, message: 'Kode faskes tidak dikenal.' };
+  revalidatePath('/');
+  return { ok: true, message: 'Berhasil bergabung ke faskes.' };
 }
 
 // ── Konsultasi (sisi dokter) ─────────────────────────────────────

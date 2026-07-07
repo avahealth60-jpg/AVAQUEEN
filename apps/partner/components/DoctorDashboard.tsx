@@ -1,9 +1,12 @@
-// Server component — dashboard dokter: konsultasi + hasil dibagikan + pendapatan.
+// Server components — seksi dokter: Konsultasi, Riwayat & pendapatan, Faskes.
 import React from 'react';
-import { doctorConsultations, doctorEarnings } from '../lib/consult';
+import { doctorConsultations, doctorEarnings, doctorProfile } from '../lib/consult';
 import { PageHead, Empty } from './widgets';
 import { ConfirmForm, CompleteButton, DeclineButton } from './ConsultActions';
 import { NoteForm } from './NoteForm';
+import { ChatBox } from './ChatBox';
+import { JoinFaskesForm } from './JoinFaskesForm';
+import { DoctorCredentials } from './DoctorCredentials';
 
 const rupiah = (n: number) => 'Rp ' + Math.round(n).toLocaleString('id-ID');
 const STATUS: Record<string, [string, string]> = {
@@ -14,23 +17,28 @@ const STATUS: Record<string, [string, string]> = {
 };
 const triageCls: Record<string, string> = { normal: 'pill--ok', perhatian: 'pill--warn', segera: 'pill--bad' };
 
-export async function DoctorDashboard({ name }: { name: string | null }) {
-  const [list, earn] = await Promise.all([doctorConsultations(), doctorEarnings()]);
+// ── Konsultasi (/) ───────────────────────────────────────────────
+export async function DoctorConsults({ name }: { name: string | null }) {
+  const [list, earn, prof] = await Promise.all([doctorConsultations(), doctorEarnings(), doctorProfile()]);
   const active = list.filter((c) => c.status === 'requested' || c.status === 'confirmed');
-  const past = list.filter((c) => c.status === 'completed' || c.status === 'cancelled');
+  const rated = list.filter((c) => c.rating != null);
+  const avgRating = rated.length ? (rated.reduce((s, c) => s + (c.rating ?? 0), 0) / rated.length) : null;
 
   return (
     <>
       <PageHead eyebrow="Dokter" title={name ? `Praktik · ${name}` : 'Konsultasi'}
-        sub="Permintaan konsultasi, hasil yang dibagikan pasien, dan pendapatanmu." />
+        sub="Permintaan konsultasi & ruang praktik. Balas pasien lewat chat." />
+
+      {prof.status !== 'verified' && <DoctorCredentials strNo={prof.strNo} sipNo={prof.sipNo} status={prof.status} />}
 
       <div className="tiles">
         <div className="tile"><div className="tile__label">Permintaan & terjadwal</div><div className="tile__num">{active.length}</div></div>
         <div className="tile"><div className="tile__label">Selesai</div><div className="tile__num">{earn.completed}</div></div>
         <div className="tile"><div className="tile__label">Pendapatan bersih</div><div className="tile__num" style={{ fontSize: 22 }}>{rupiah(earn.net)}</div></div>
+        <div className="tile"><div className="tile__label">Rating rata-rata</div><div className="tile__num">{avgRating ? `★ ${avgRating.toFixed(1)}` : '—'}</div></div>
       </div>
 
-      <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card">
         <div className="card__title">Konsultasi aktif</div>
         {active.length === 0 ? <Empty title="Tidak ada konsultasi aktif" hint="Permintaan dari pasien akan muncul di sini." /> : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -44,17 +52,14 @@ export async function DoctorDashboard({ name }: { name: string | null }) {
                   {c.sharedReadings.length > 0 ? (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
                       {c.sharedReadings.map((r) => (
-                        <span key={r.id} className={`pill ${r.triage ? triageCls[r.triage] : 'pill--mute'}`}>
-                          {r.type}: {r.display}
-                        </span>
+                        <span key={r.id} className={`pill ${r.triage ? triageCls[r.triage] : 'pill--mute'}`}>{r.type}: {r.display}</span>
                       ))}
                     </div>
                   ) : <div className="hint" style={{ marginBottom: 8 }}>Tidak ada hasil dibagikan.</div>}
 
                   {c.status === 'requested' && (
                     <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                      <ConfirmForm id={c.id} />
-                      <DeclineButton id={c.id} />
+                      <ConfirmForm id={c.id} /><DeclineButton id={c.id} />
                     </div>
                   )}
                   {c.status === 'confirmed' && (
@@ -62,6 +67,7 @@ export async function DoctorDashboard({ name }: { name: string | null }) {
                       {c.scheduledAt && <div className="hint">Jadwal: {new Date(c.scheduledAt).toLocaleString('id-ID')}</div>}
                       {c.joinUrl && <div style={{ margin: '6px 0' }}><a className="link" href={c.joinUrl} target="_blank" rel="noreferrer">Buka ruang konsultasi →</a></div>}
                       <NoteForm id={c.id} initial={c.doctorNote} />
+                      <ChatBox consultationId={c.id} />
                       <div style={{ marginTop: 8 }}><CompleteButton id={c.id} /></div>
                     </div>
                   )}
@@ -71,24 +77,54 @@ export async function DoctorDashboard({ name }: { name: string | null }) {
           </div>
         )}
       </div>
+    </>
+  );
+}
 
+// ── Riwayat & pendapatan (/riwayat) ──────────────────────────────
+export async function DoctorHistory() {
+  const [list, earn] = await Promise.all([doctorConsultations(), doctorEarnings()]);
+  const past = list.filter((c) => c.status === 'completed' || c.status === 'cancelled');
+
+  return (
+    <>
+      <PageHead eyebrow="Dokter · Riwayat" title="Riwayat & pendapatan" sub="Konsultasi selesai, penilaian, dan rincian pendapatanmu." />
+      <div className="tiles">
+        <div className="tile"><div className="tile__label">Selesai</div><div className="tile__num">{earn.completed}</div></div>
+        <div className="tile"><div className="tile__label">Bruto</div><div className="tile__num" style={{ fontSize: 20 }}>{rupiah(earn.gross)}</div></div>
+        <div className="tile"><div className="tile__label">Potongan AVA</div><div className="tile__num" style={{ fontSize: 20 }}>{rupiah(earn.avaCut)}</div></div>
+        <div className="tile"><div className="tile__label">Bersih</div><div className="tile__num" style={{ fontSize: 20 }}>{rupiah(earn.net)}</div></div>
+      </div>
       <div className="card">
-        <div className="card__title">Riwayat</div>
+        <div className="card__title">Riwayat konsultasi</div>
         {past.length === 0 ? <Empty title="Belum ada riwayat" hint="Konsultasi selesai akan tercatat di sini." /> : (
           <div className="tbl-wrap">
             <table className="tbl">
-              <thead><tr><th>Pasien</th><th>Status</th><th>Tarif</th></tr></thead>
+              <thead><tr><th>Pasien</th><th>Status</th><th>Rating</th><th>Tarif</th></tr></thead>
               <tbody>
                 {past.map((c) => (
-                  <tr key={c.id}><td>{c.patientName}</td>
+                  <tr key={c.id}>
+                    <td>{c.patientName}</td>
                     <td><span className={STATUS[c.status]?.[0] ?? 'pill pill--mute'}>{STATUS[c.status]?.[1] ?? c.status}</span></td>
-                    <td className="mono">{rupiah(c.fee)}</td></tr>
+                    <td>{c.rating ? `★ ${c.rating}` : '—'}</td>
+                    <td className="mono">{rupiah(c.fee)}</td>
+                  </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
       </div>
+    </>
+  );
+}
+
+// ── Faskes (/faskes) ─────────────────────────────────────────────
+export function DoctorFaskes() {
+  return (
+    <>
+      <PageHead eyebrow="Dokter · Faskes" title="Fasilitas kesehatan" sub="Tautkan praktikmu ke klinik/faskes agar terkelola bersama." />
+      <JoinFaskesForm />
     </>
   );
 }

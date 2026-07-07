@@ -13,6 +13,7 @@ const ThemeHead = () => <head><script dangerouslySetInnerHTML={{ __html: NO_FLAS
 import './globals.css';
 import React from 'react';
 import { TopBar } from '../components/TopBar';
+import { PartnerNav } from '../components/PartnerNav';
 import { LoginForm } from '../components/LoginForm';
 import { getPartnerAuth, isPartnerRole } from '../lib/auth';
 
@@ -51,6 +52,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <ThemeHead />
       <body>
         {auth.configured && <TopBar role={auth.role} orgName={auth.org?.name ?? null} email={auth.email} />}
+        {auth.configured && <PartnerNav role={auth.role} orgKind={auth.org?.kind ?? null} />}
         {children}
       </body>
     </html>

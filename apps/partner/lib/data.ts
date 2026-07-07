@@ -15,6 +15,97 @@ export async function deviceModels(): Promise<DeviceModel[]> {
   return (data ?? []) as DeviceModel[];
 }
 
+// ── Vendor: etalase & pesanan (marketplace) ──────────────────────
+export interface VendorListing {
+  id: string; title: string; price: number; stock: number; status: string; verified: boolean;
+}
+export async function vendorListings(): Promise<VendorListing[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from('product_listings').select('id, title, price, stock, status')
+    .order('created_at', { ascending: false });
+  const { data: ver } = await supabase.rpc('verified_listing_ids');
+  const verified = new Set<string>(Array.isArray(ver) ? ver.map((v) => (typeof v === 'string' ? v : (v?.verified_listing_ids ?? ''))) : []);
+  return ((data ?? []) as { id: string; title: string; price: number; stock: number; status: string }[]).map((l) => ({
+    id: l.id, title: l.title, price: Number(l.price), stock: l.stock, status: l.status, verified: verified.has(l.id),
+  }));
+}
+
+export interface VendorOrder {
+  id: string; status: string; total: number; createdAt: string;
+  items: { title: string; qty: number; unitPrice: number }[];
+}
+export async function vendorOrders(): Promise<VendorOrder[]> {
+  const supabase = createClient();
+  // RLS: vendor hanya melihat order yang memuat itemnya.
+  const { data: os } = await supabase
+    .from('orders').select('id, status, total, created_at').order('created_at', { ascending: false });
+  const orders = (os ?? []) as { id: string; status: string; total: number; created_at: string }[];
+  if (orders.length === 0) return [];
+  const ids = orders.map((o) => o.id);
+  const { data: its } = await supabase
+    .from('order_items').select('order_id, title, qty, unit_price').in('order_id', ids); // RLS: item vendor ini saja
+  const byOrder = new Map<string, { title: string; qty: number; unitPrice: number }[]>();
+  ((its ?? []) as { order_id: string; title: string; qty: number; unit_price: number }[]).forEach((i) => {
+    const arr = byOrder.get(i.order_id) ?? [];
+    arr.push({ title: i.title, qty: i.qty, unitPrice: Number(i.unit_price) });
+    byOrder.set(i.order_id, arr);
+  });
+  return orders.map((o) => ({
+    id: o.id, status: o.status, total: Number(o.total), createdAt: o.created_at, items: byOrder.get(o.id) ?? [],
+  }));
+}
+
+// ── Lab: riwayat kalibrasi ───────────────────────────────────────
+export interface CalibrationRow {
+  id: string; serial: string; performedAt: string; nextDueAt: string;
+  result: 'lulus' | 'perlu_tinjau' | 'gagal' | null; certificateUrl: string | null;
+}
+export async function labCalibrationHistory(): Promise<CalibrationRow[]> {
+  const supabase = createClient();
+  // RLS "lab manages own calibrations" → hanya kalibrasi lab ini.
+  const { data: cals } = await supabase
+    .from('calibrations').select('id, device_id, performed_at, next_due_at, certificate_url')
+    .order('performed_at', { ascending: false }).limit(100);
+  const rows = (cals ?? []) as { id: string; device_id: string; performed_at: string; next_due_at: string; certificate_url: string | null }[];
+  if (rows.length === 0) return [];
+
+  const calIds = rows.map((c) => c.id);
+  const devIds = [...new Set(rows.map((c) => c.device_id))];
+  const [qcRes, devRes] = await Promise.all([
+    supabase.from('qc_results').select('calibration_id, result').in('calibration_id', calIds),
+    supabase.from('devices').select('id, serial').in('id', devIds),
+  ]);
+  const qc = new Map(((qcRes.data ?? []) as { calibration_id: string; result: string }[]).map((q) => [q.calibration_id, q.result]));
+  const serial = new Map(((devRes.data ?? []) as { id: string; serial: string }[]).map((d) => [d.id, d.serial]));
+
+  return rows.map((c) => ({
+    id: c.id, serial: serial.get(c.device_id) ?? '—',
+    performedAt: c.performed_at, nextDueAt: c.next_due_at,
+    result: (qc.get(c.id) as 'lulus' | 'perlu_tinjau' | 'gagal' | undefined) ?? null,
+    certificateUrl: c.certificate_url,
+  }));
+}
+
+export interface LabBadgeRow { serial: string; status: string; issuedAt: string; expiresAt: string; }
+/** Badge yang terbit dari kalibrasi lab ini. */
+export async function labBadges(): Promise<LabBadgeRow[]> {
+  const supabase = createClient();
+  const { data: cals } = await supabase.from('calibrations').select('id, device_id'); // RLS: lab ini
+  const rows = (cals ?? []) as { id: string; device_id: string }[];
+  if (rows.length === 0) return [];
+  const calIds = rows.map((c) => c.id);
+  const devIds = [...new Set(rows.map((c) => c.device_id))];
+  const [bRes, dRes] = await Promise.all([
+    supabase.from('badges').select('device_id, calibration_id, status, issued_at, expires_at').in('calibration_id', calIds),
+    supabase.from('devices').select('id, serial').in('id', devIds),
+  ]);
+  const serial = new Map(((dRes.data ?? []) as { id: string; serial: string }[]).map((d) => [d.id, d.serial]));
+  return ((bRes.data ?? []) as { device_id: string; status: string; issued_at: string; expires_at: string }[])
+    .map((b) => ({ serial: serial.get(b.device_id) ?? '—', status: b.status, issuedAt: b.issued_at, expiresAt: b.expires_at }))
+    .sort((a, b) => (a.expiresAt > b.expiresAt ? -1 : 1));
+}
+
 export interface LabDeviceRow {
   id: string;
   serial: string;

@@ -3,7 +3,7 @@
 // Angka di bawah adalah PROYEKSI dari basis alat ber-QC × tarif placeholder.
 import React from 'react';
 import { fleet, partners, isConfigured } from '../../lib/data';
-import { commissionStats } from '../../lib/data';
+import { commissionStats, revenueStreams } from '../../lib/data';
 import { PageHead, ConnBanner } from '../../components/widgets';
 
 export const dynamic = 'force-dynamic';
@@ -12,7 +12,7 @@ const TARIF_QC_PER_ALAT = 75000; // placeholder IDR/alat/tahun — atur di Konfi
 const rupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
 
 export default async function KeuanganPage() {
-  const [rows, mitra, komisi] = await Promise.all([fleet(), partners(), commissionStats()]);
+  const [rows, mitra, komisi, streams] = await Promise.all([fleet(), partners(), commissionStats(), revenueStreams()]);
   const billable = rows.filter((r) => r.qc !== null).length;
   const proyeksiTahunan = billable * TARIF_QC_PER_ALAT;
   const vendors = mitra.filter((m) => m.kind === 'vendor').length;
@@ -37,6 +37,13 @@ export default async function KeuanganPage() {
         <div className="tile"><div className="tile__label">Vendor berkontrak</div><div className="tile__num">{vendors}</div></div>
         <div className="tile"><div className="tile__label">Proyeksi/tahun</div><div className="tile__num" style={{ fontSize: 22 }}>{rupiah(proyeksiTahunan)}</div></div>
         <div className="tile"><div className="tile__label">Proyeksi/bulan</div><div className="tile__num" style={{ fontSize: 22 }}>{rupiah(Math.round(proyeksiTahunan / 12))}</div></div>
+      </div>
+
+      <div className="card__title" style={{ marginTop: 24 }}>Aliran pendapatan aktual</div>
+      <div className="tiles">
+        <div className="tile"><div className="tile__label">Langganan Premium</div><div className="tile__num" style={{ fontSize: 20 }}>{rupiah(streams.subscriptionRevenue)}</div><div className="tile__foot">{streams.subscriptionPaid} pembayaran</div></div>
+        <div className="tile"><div className="tile__label">GMV Marketplace</div><div className="tile__num" style={{ fontSize: 20 }}>{rupiah(streams.marketplaceGmv)}</div><div className="tile__foot">{streams.ordersPaid} pesanan dibayar</div></div>
+        <div className="tile"><div className="tile__label">Komisi konsultasi (AVA)</div><div className="tile__num" style={{ fontSize: 20 }}>{rupiah(komisi.avaRevenue)}</div><div className="tile__foot">{komisi.count} konsultasi</div></div>
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>

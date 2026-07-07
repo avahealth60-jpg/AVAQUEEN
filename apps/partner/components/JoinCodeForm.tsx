@@ -1,9 +1,12 @@
 'use client';
 import React, { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { setJoinCode } from '../app/actions';
+import { setJoinCode, type JoinCodeResult } from '../app/actions';
 
-export function JoinCodeForm({ current }: { current: string | null }) {
+type CodeAction = (prev: JoinCodeResult | null, fd: FormData) => Promise<JoinCodeResult>;
+
+// `action` opsional agar bisa dipakai ulang (employer / faskes). Default = employer.
+export function JoinCodeForm({ current, action = setJoinCode }: { current: string | null; action?: CodeAction }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [code, setCode] = useState('');
@@ -14,7 +17,7 @@ export function JoinCodeForm({ current }: { current: string | null }) {
     start(async () => {
       const fd = new FormData();
       fd.set('code', custom); // kosong → fungsi mengacak
-      const r = await setJoinCode(null, fd);
+      const r = await action(null, fd);
       setNote({ kind: r.ok ? 'ok' : 'bad', text: r.message });
       if (r.ok) { setDisplay(r.code ?? display); setCode(''); router.refresh(); }
     });

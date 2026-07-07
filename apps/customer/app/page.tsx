@@ -7,6 +7,7 @@ import { ConsentCard } from '../components/ConsentCard';
 import { ReadingForm } from '../components/ReadingForm';
 import { History } from '../components/History';
 import { ConnBanner } from '../components/ConnBanner';
+import { OnboardingHint } from '../components/OnboardingHint';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +48,8 @@ export default async function Home() {
         <ConsentCard />
       ) : (
         <>
+          <OnboardingHint />
+
           <Link
             href="/notifikasi"
             className="card"
@@ -79,6 +82,21 @@ export default async function Home() {
           <div className="card">
             <ReadingForm />
           </div>
+
+          <Link
+            href="/catat"
+            className="card"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 12, textDecoration: 'none', marginTop: 'var(--ava-space-3)',
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 600, color: 'var(--ava-color-ink-900)' }}>Catat panel lengkap</div>
+              <div style={{ fontSize: 14, color: 'var(--ava-color-ink-500)' }}>Isi banyak parameter sekaligus</div>
+            </div>
+            <span aria-hidden style={{ fontSize: 22, color: 'var(--ava-color-trust-600)' }}>→</span>
+          </Link>
 
           <Link
             href="/perangkat"
@@ -158,6 +176,21 @@ export default async function Home() {
             {billing?.effective === 'premium'
               ? <span className="pill pill--normal" style={{ whiteSpace: 'nowrap' }}>Premium</span>
               : <span aria-hidden style={{ fontSize: 22, color: 'var(--ava-color-trust-600)' }}>→</span>}
+          </Link>
+
+          <Link
+            href="/rewards"
+            className="card"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 12, textDecoration: 'none', marginTop: 'var(--ava-space-3)',
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 600, color: 'var(--ava-color-ink-900)' }}>Lencana &amp; rewards</div>
+              <div style={{ fontSize: 14, color: 'var(--ava-color-ink-500)' }}>Kumpulkan pencapaian dari kebiasaan sehat</div>
+            </div>
+            <span aria-hidden style={{ fontSize: 22, color: 'var(--ava-color-trust-600)' }}>→</span>
           </Link>
 
           <Link

@@ -1,15 +1,9 @@
 -- ============================================================================
--- AVA Health — SETUP DB LENGKAP (semua migrasi 0001–v120, berurutan)
--- Cara pakai: buka Supabase Dashboard → SQL Editor → tempel SELURUH file ini
--- → Run. Aman diulang (idempoten: create if not exists / drop policy if exists).
--- Auth (auth.uid/jwt, roles anon/authenticated/service_role) sudah disediakan
--- Supabase. Setelah ini, jalankan check.sql untuk verifikasi.
--- Digenerate dari supabase/migrations/. JANGAN edit manual — ubah migrasinya.
+-- AVA Health — SETUP DB LENGKAP (semua migrasi 0001–v126, berurutan)
+-- Supabase SQL Editor → tempel SELURUH file → Run. Idempoten. Lalu check.sql.
 -- ============================================================================
 
--- ┌──────────────────────────────────────────────────────────────────────────
--- │ migrations/0001_enums.sql
--- └──────────────────────────────────────────────────────────────────────────
+-- ┌── migrations/0001_enums.sql
 -- 0001_enums.sql
 -- Tipe enum inti. Dicocokkan 1:1 dengan packages/domain/src/types.ts.
 
@@ -35,9 +29,7 @@ exception when duplicate_object then null;
 end $$;
 
 
--- ┌──────────────────────────────────────────────────────────────────────────
--- │ migrations/0002_core_tables.sql
--- └──────────────────────────────────────────────────────────────────────────
+-- ┌── migrations/0002_core_tables.sql
 -- 0002_core_tables.sql
 -- Tabel inti + fungsi helper untuk RLS.
 -- Asumsi lingkungan Supabase: schema `auth`, fungsi `auth.uid()`, dan role
@@ -209,9 +201,7 @@ create index on consultations(doctor_id);
 create index on consultations(customer_id);
 
 
--- ┌──────────────────────────────────────────────────────────────────────────
--- │ migrations/0003_rls.sql
--- └──────────────────────────────────────────────────────────────────────────
+-- ┌── migrations/0003_rls.sql
 -- 0003_rls.sql
 -- Row Level Security: jantung pemisahan tanggung jawab partnership.
 -- Aturan: SEMUA tabel RLS-on, default DENY. Akses diberikan eksplisit per peran.
@@ -380,9 +370,7 @@ create policy "member reads own membership" on organization_members
   for select using (profile_id = auth.uid() or app.is_admin());
 
 
--- ┌──────────────────────────────────────────────────────────────────────────
--- │ migrations/0004_triggers_grants.sql
--- └──────────────────────────────────────────────────────────────────────────
+-- ┌── migrations/0004_triggers_grants.sql
 -- 0004_triggers_grants.sql
 -- Trigger audit + grant privilege ke role authenticated (RLS tetap menyaring baris).
 
@@ -427,9 +415,7 @@ grant select on all tables in schema public to anon;
 grant execute on all functions in schema app to authenticated, anon;
 
 
--- ┌──────────────────────────────────────────────────────────────────────────
--- │ migrations/0005_auth_profiles.sql
--- └──────────────────────────────────────────────────────────────────────────
+-- ┌── migrations/0005_auth_profiles.sql
 -- 0005_auth_profiles.sql
 -- Saat user baru terbentuk di Supabase Auth (auth.users), buat baris profiles
 -- otomatis. Role default 'customer'; admin/vendor/lab dipromosikan manual atau
@@ -460,9 +446,7 @@ create trigger on_auth_user_created
   for each row execute function public.handle_new_user();
 
 
--- ┌──────────────────────────────────────────────────────────────────────────
--- │ migrations/0006_badge_issuance.sql
--- └──────────────────────────────────────────────────────────────────────────
+-- ┌── migrations/0006_badge_issuance.sql
 -- 0006_badge_issuance.sql
 -- Penerbitan badge sebagai AKSI SISTEM, bukan privilege pengguna.
 -- Saat lab menyimpan QC 'lulus' (diizinkan RLS "lab writes qc for own
@@ -506,9 +490,7 @@ create trigger trg_issue_badge_on_qc
   for each row execute function app.issue_badge_on_qc();
 
 
--- ┌──────────────────────────────────────────────────────────────────────────
--- │ migrations/0007_partner_policies.sql
--- └──────────────────────────────────────────────────────────────────────────
+-- ┌── migrations/0007_partner_policies.sql
 -- 0007_partner_policies.sql
 -- Vendor berhak melihat hasil QC alatnya sendiri (simetris dengan kebijakan
 -- "vendor reads calibrations of own devices"). Tanpa ini, portal vendor hanya
@@ -527,9 +509,7 @@ create policy "vendor reads qc of own devices" on qc_results
   );
 
 
--- ┌──────────────────────────────────────────────────────────────────────────
--- │ migrations/0008_analysis_write.sql
--- └──────────────────────────────────────────────────────────────────────────
+-- ┌── migrations/0008_analysis_write.sql
 -- 0008_analysis_write.sql
 -- Customer boleh menyimpan hasil analisis UNTUK reading miliknya sendiri.
 -- Aman karena kepemilikan reading diverifikasi; invariant SaMD (is_educational,
@@ -547,9 +527,7 @@ create policy "customer writes analysis for own readings" on analysis_results
   );
 
 
--- ┌──────────────────────────────────────────────────────────────────────────
--- │ migrations/0009_consultations_commerce.sql
--- └──────────────────────────────────────────────────────────────────────────
+-- ┌── migrations/0009_consultations_commerce.sql
 -- 0009_consultations_commerce.sql
 -- Melengkapi alur konsultasi: tarif, komisi AVA, dan direktori dokter.
 
@@ -618,9 +596,7 @@ create policy "doctor reads own patients" on profiles
 grant select, insert, update, delete on commissions to authenticated;
 
 
--- ┌──────────────────────────────────────────────────────────────────────────
--- │ migrations/20260628093000_v111_pemeriksaan_katalog.sql
--- └──────────────────────────────────────────────────────────────────────────
+-- ┌── migrations/20260628093000_v111_pemeriksaan_katalog.sql
 -- ============================================================================
 -- AVA Health — Migrasi V1.1.1 : Mesin Pemeriksaan Multi-parameter & Katalog
 -- ----------------------------------------------------------------------------
@@ -833,9 +809,7 @@ create policy "customer owns checkup_values" on checkup_values
 -- ============================================================================
 
 
--- ┌──────────────────────────────────────────────────────────────────────────
--- │ migrations/20260628093001_v111_seed_katalog.sql
--- └──────────────────────────────────────────────────────────────────────────
+-- ┌── migrations/20260628093001_v111_seed_katalog.sql
 -- ============================================================================
 -- AVA Health — Migrasi V1.1.1 : Seed Katalog Pemeriksaan
 -- ----------------------------------------------------------------------------
@@ -908,9 +882,7 @@ on conflict (parameter_id, cohort) do update
       source = excluded.source, signed_off_by = excluded.signed_off_by, signed_off_at = excluded.signed_off_at;
 
 
--- ┌──────────────────────────────────────────────────────────────────────────
--- │ migrations/20260628094000_v112_basis_pengetahuan.sql
--- └──────────────────────────────────────────────────────────────────────────
+-- ┌── migrations/20260628094000_v112_basis_pengetahuan.sql
 -- ============================================================================
 -- AVA Health — Migrasi V1.1.2 : Basis Pengetahuan Terkurasi
 -- ----------------------------------------------------------------------------
@@ -957,9 +929,7 @@ create policy "pengetahuan admin write" on knowledge_entries
 -- ============================================================================
 
 
--- ┌──────────────────────────────────────────────────────────────────────────
--- │ migrations/20260628094001_v112_seed_pengetahuan.sql
--- └──────────────────────────────────────────────────────────────────────────
+-- ┌── migrations/20260628094001_v112_seed_pengetahuan.sql
 -- ============================================================================
 -- AVA Health — Migrasi V1.1.2 : Seed Basis Pengetahuan (CONTOH)
 -- ----------------------------------------------------------------------------
@@ -1002,9 +972,7 @@ on conflict (parameter_id, triage) do update
       signed_off_by = excluded.signed_off_by, signed_off_at = excluded.signed_off_at;
 
 
--- ┌──────────────────────────────────────────────────────────────────────────
--- │ migrations/20260705100000_v113_wearable.sql
--- └──────────────────────────────────────────────────────────────────────────
+-- ┌── migrations/20260705100000_v113_wearable.sql
 -- 20260705100000_v113_wearable.sql
 -- Fase A: fondasi koneksi smartwatch/wearable.
 --
@@ -1054,9 +1022,7 @@ create policy "admin reads wearable connections" on wearable_connections
 grant select, insert, update, delete on wearable_connections to authenticated;
 
 
--- ┌──────────────────────────────────────────────────────────────────────────
--- │ migrations/20260705110000_v114_wellness.sql
--- └──────────────────────────────────────────────────────────────────────────
+-- ┌── migrations/20260705110000_v114_wellness.sql
 -- 20260705110000_v114_wellness.sql
 -- Fase B: program wellness (edukatif, non-SaMD).
 --
@@ -1119,9 +1085,7 @@ grant select, insert, update, delete on wellness_enrollments to authenticated;
 grant select, insert, update, delete on wellness_checkins to authenticated;
 
 
--- ┌──────────────────────────────────────────────────────────────────────────
--- │ migrations/20260705120000_v115_caregiver.sql
--- └──────────────────────────────────────────────────────────────────────────
+-- ┌── migrations/20260705120000_v115_caregiver.sql
 -- 20260705120000_v115_caregiver.sql
 -- Fase C: berbagi ke pendamping/keluarga (mis. anak merawat orang tua).
 --
@@ -1227,9 +1191,7 @@ grant execute on function public.claim_caregiver_invite(text) to authenticated;
 grant execute on function app.is_active_caregiver_of(uuid, text) to authenticated;
 
 
--- ┌──────────────────────────────────────────────────────────────────────────
--- │ migrations/20260705130000_v116_billing.sql
--- └──────────────────────────────────────────────────────────────────────────
+-- ┌── migrations/20260705130000_v116_billing.sql
 -- 20260705130000_v116_billing.sql
 -- Fase C: monetisasi — langganan premium + catatan pembayaran.
 --
@@ -1334,9 +1296,7 @@ grant execute on function public.mock_confirm_payment(uuid) to authenticated;
 grant execute on function public.cancel_my_subscription() to authenticated;
 
 
--- ┌──────────────────────────────────────────────────────────────────────────
--- │ migrations/20260705140000_v117_marketplace.sql
--- └──────────────────────────────────────────────────────────────────────────
+-- ┌── migrations/20260705140000_v117_marketplace.sql
 -- 20260705140000_v117_marketplace.sql
 -- Marketplace alat ber-badge: menutup flywheel QC → pembelian.
 --
@@ -1474,9 +1434,7 @@ grant select, insert, update, delete on order_items to authenticated;
 grant execute on function public.verified_listing_ids() to anon, authenticated;
 
 
--- ┌──────────────────────────────────────────────────────────────────────────
--- │ migrations/20260705150000_v118_corporate.sql
--- └──────────────────────────────────────────────────────────────────────────
+-- ┌── migrations/20260705150000_v118_corporate.sql
 -- 20260705150000_v118_corporate.sql
 -- Wellness korporat / B2B.
 --
@@ -1604,9 +1562,7 @@ grant execute on function public.employer_wellness_summary(uuid) to authenticate
 grant execute on function public.set_employer_join_code(uuid, text) to authenticated;
 
 
--- ┌──────────────────────────────────────────────────────────────────────────
--- │ migrations/20260705160000_v119_customer_profile.sql
--- └──────────────────────────────────────────────────────────────────────────
+-- ┌── migrations/20260705160000_v119_customer_profile.sql
 -- 20260705160000_v119_customer_profile.sql
 -- Profil medis customer (untuk personalisasi & auto-isi kalkulator) +
 -- PERBAIKAN KEAMANAN eskalasi peran.
@@ -1679,13 +1635,230 @@ $$;
 grant execute on function public.delete_my_account() to authenticated;
 
 
--- ┌──────────────────────────────────────────────────────────────────────────
--- │ migrations/20260705170000_v120_consult_notes.sql
--- └──────────────────────────────────────────────────────────────────────────
+-- ┌── migrations/20260705170000_v120_consult_notes.sql
 -- 20260705170000_v120_consult_notes.sql
 -- Catatan/resep dokter pasca-konsultasi, tampil ke pasien.
 -- Tak perlu RLS baru: pasien sudah membaca baris konsultasinya sendiri
 -- ("customer sees own consultations"), dan dokter menulis via
 -- "doctor updates assigned consultation".
 alter table consultations add column if not exists doctor_note text;
+
+
+-- ┌── migrations/20260705180000_v121_consult_rating.sql
+-- 20260705180000_v121_consult_rating.sql
+-- Rating pasien untuk konsultasi (1–5) + komentar opsional.
+-- Tak perlu RLS baru: pasien menulis via "customer updates own consultation",
+-- dokter membaca via "doctor sees assigned consultations".
+alter table consultations add column if not exists rating int check (rating between 1 and 5);
+alter table consultations add column if not exists rating_comment text;
+
+
+-- ┌── migrations/20260705190000_v122_push_subscriptions.sql
+-- 20260705190000_v122_push_subscriptions.sql
+-- Web Push (E1): simpan langganan push browser per pengguna.
+-- Pengiriman dilakukan Edge Function (send-push) ber-service_role memakai VAPID.
+create table if not exists push_subscriptions (
+  id          uuid primary key default gen_random_uuid(),
+  customer_id uuid not null references profiles(id) on delete cascade,
+  endpoint    text not null unique,
+  p256dh      text not null,
+  auth        text not null,
+  created_at  timestamptz not null default now()
+);
+create index if not exists idx_push_subs_customer on push_subscriptions(customer_id);
+
+alter table push_subscriptions enable row level security;
+
+-- Pemilik mengelola langganan push-nya sendiri.
+drop policy if exists "customer manages own push subs" on push_subscriptions;
+create policy "customer manages own push subs" on push_subscriptions
+  for all using (customer_id = auth.uid()) with check (customer_id = auth.uid());
+
+grant select, insert, update, delete on push_subscriptions to authenticated;
+
+
+-- ┌── migrations/20260705200000_v123_consult_messages.sql
+-- 20260705200000_v123_consult_messages.sql
+-- Chat konsultasi (D2): pesan antara pasien & dokter dalam satu konsultasi.
+-- RLS: hanya PESERTA konsultasi (customer_id / doctor_id) boleh baca & kirim;
+-- pengirim wajib dirinya sendiri.
+create table if not exists consultation_messages (
+  id              uuid primary key default gen_random_uuid(),
+  consultation_id uuid not null references consultations(id) on delete cascade,
+  sender_id       uuid not null references profiles(id),
+  body            text not null check (length(btrim(body)) > 0),
+  created_at      timestamptz not null default now()
+);
+create index if not exists idx_consult_msgs_consult on consultation_messages(consultation_id, created_at);
+
+alter table consultation_messages enable row level security;
+
+-- Fungsi bantu: apakah penonton peserta konsultasi ini? (SECURITY DEFINER agar
+-- pengecekan tak memicu RLS consultations).
+create or replace function app.is_consult_participant(p_consult uuid)
+returns boolean language sql stable security definer set search_path = public, app as $$
+  select exists (
+    select 1 from public.consultations c
+    where c.id = p_consult and (c.customer_id = auth.uid() or c.doctor_id = auth.uid())
+  );
+$$;
+
+drop policy if exists "participant reads consult messages" on consultation_messages;
+create policy "participant reads consult messages" on consultation_messages
+  for select using (app.is_consult_participant(consultation_id));
+
+drop policy if exists "participant sends consult message" on consultation_messages;
+create policy "participant sends consult message" on consultation_messages
+  for insert with check (sender_id = auth.uid() and app.is_consult_participant(consultation_id));
+
+grant select, insert on consultation_messages to authenticated;
+grant execute on function app.is_consult_participant(uuid) to authenticated;
+
+
+-- ┌── migrations/20260705210000_v124_vendor_fulfillment.sql
+-- 20260705210000_v124_vendor_fulfillment.sql
+-- Vendor memenuhi pesanan: ubah status order yang memuat itemnya.
+-- SECURITY DEFINER karena RLS orders hanya memberi vendor akses SELECT.
+-- Menegakkan keanggotaan (app.vendor_in_order) + transisi fulfillment yang sah.
+create or replace function public.vendor_set_order_status(p_order uuid, p_status text)
+returns boolean language plpgsql security definer set search_path = public, app as $$
+declare cur text;
+begin
+  if not app.vendor_in_order(p_order) then
+    return false;                                  -- bukan vendor untuk order ini
+  end if;
+  select status into cur from public.orders where id = p_order;
+  if cur is null then return false; end if;
+  -- Transisi fulfillment yang boleh dilakukan vendor.
+  if not (
+       (cur = 'paid'    and p_status in ('shipped', 'cancelled'))
+    or (cur = 'shipped' and p_status in ('delivered', 'cancelled'))
+  ) then
+    return false;
+  end if;
+  update public.orders set status = p_status where id = p_order;
+  return true;
+end;
+$$;
+
+grant execute on function public.vendor_set_order_status(uuid, text) to authenticated;
+
+
+-- ┌── migrations/20260705220000_v125_faskes.sql
+-- 20260705220000_v125_faskes.sql
+-- Modul Faskes (fasilitas kesehatan): dokter bergabung ke faskes (keanggotaan
+-- organisasi), admin faskes melihat AGREGAT operasional dokternya.
+--
+-- PRIVASI: admin faskes TIDAK melihat data kesehatan pasien atau isi konsultasi.
+-- Hanya ringkasan jumlah/rating/pendapatan (fungsi definer faskes_summary).
+--
+-- kind='faskes' & organizations.join_code sudah ada (migrasi awal + v118).
+
+-- Anggota organisasi boleh melihat sesama anggota (mis. admin faskes → dokternya).
+drop policy if exists "member reads co-members" on organization_members;
+create policy "member reads co-members" on organization_members
+  for select using (app.is_member_of(organization_id));
+
+-- Dokter bergabung ke faskes via kode (SECURITY DEFINER; RLS members tak
+-- mengizinkan insert langsung). Hanya profil berperan 'doctor'.
+create or replace function public.join_faskes(code text)
+returns uuid language plpgsql security definer set search_path = public, app as $$
+declare fid uuid;
+begin
+  if app.current_role() <> 'doctor' then return null; end if;
+  select id into fid from public.organizations where kind = 'faskes' and join_code = code;
+  if fid is null then return null; end if;
+  insert into public.organization_members(organization_id, profile_id)
+  values (fid, auth.uid())
+  on conflict do nothing;
+  return fid;
+end;
+$$;
+
+-- Admin faskes mengatur/mengacak kode gabung dokter.
+create or replace function public.faskes_set_join_code(p_faskes uuid, p_code text)
+returns text language plpgsql security definer set search_path = public, app as $$
+declare final text;
+begin
+  if not app.is_member_of(p_faskes) then return null; end if;
+  final := nullif(regexp_replace(upper(coalesce(p_code, '')), '[^A-Z0-9]', '', 'g'), '');
+  if final is null then final := upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8)); end if;
+  update public.organizations set join_code = final where id = p_faskes and kind = 'faskes';
+  return final;
+end;
+$$;
+
+-- Ringkasan AGREGAT faskes (hanya anggota/admin). Tak pernah data pasien.
+create or replace function public.faskes_summary(p_faskes uuid)
+returns table(doctors int, consultations int, completed int, avg_rating numeric, gross numeric)
+language plpgsql stable security definer set search_path = public, app as $$
+begin
+  if not (app.is_member_of(p_faskes) or app.is_admin()) then
+    return;
+  end if;
+  return query
+  with docs as (
+    select om.profile_id as id
+    from public.organization_members om
+    join public.profiles p on p.id = om.profile_id and p.role = 'doctor'
+    where om.organization_id = p_faskes
+  ), cons as (
+    select c.status, c.rating, c.fee from public.consultations c
+    where c.doctor_id in (select id from docs)
+  )
+  select
+    (select count(*)::int from docs),
+    (select count(*)::int from cons),
+    (select count(*)::int from cons where status = 'completed'),
+    (select round(avg(rating), 1) from cons where rating is not null),
+    (select coalesce(sum(fee), 0) from cons where status = 'completed');
+end;
+$$;
+
+grant execute on function public.join_faskes(text) to authenticated;
+grant execute on function public.faskes_set_join_code(uuid, text) to authenticated;
+grant execute on function public.faskes_summary(uuid) to authenticated;
+
+
+-- ┌── migrations/20260705230000_v126_doctor_verification.sql
+-- 20260705230000_v126_doctor_verification.sql
+-- Verifikasi dokter (trust layer): dokter mengisi STR/SIP; ADMIN memverifikasi.
+-- Dokter TIDAK bisa memverifikasi dirinya sendiri (guard di trigger profil).
+alter table profiles add column if not exists str_no text;
+alter table profiles add column if not exists sip_no text;
+alter table profiles add column if not exists doctor_status text
+  check (doctor_status in ('pending','verified','rejected')) default 'pending';
+
+-- Perbarui pagar update profil: non-admin tak bisa ubah role, id, ATAU doctor_status.
+create or replace function app.guard_profile_update()
+returns trigger language plpgsql security definer set search_path = public, app as $$
+begin
+  if new.id is distinct from old.id then
+    new.id := old.id;
+  end if;
+  -- service_role = backend tepercaya (app admin) → dilewatkan.
+  if new.role is distinct from old.role
+     and not app.is_admin() and coalesce(auth.role(), '') <> 'service_role' then
+    new.role := old.role;
+  end if;
+  if new.doctor_status is distinct from old.doctor_status
+     and not app.is_admin() and coalesce(auth.role(), '') <> 'service_role' then
+    new.doctor_status := old.doctor_status;      -- hanya admin yang memverifikasi
+  end if;
+  return new;
+end;
+$$;
+
+-- Admin memverifikasi/menolak dokter (SECURITY DEFINER; cek is_admin).
+create or replace function public.set_doctor_verification(p_doctor uuid, p_status text)
+returns boolean language plpgsql security definer set search_path = public, app as $$
+begin
+  if not (app.is_admin() or coalesce(auth.role(), '') = 'service_role') then return false; end if;
+  if p_status not in ('pending','verified','rejected') then return false; end if;
+  update public.profiles set doctor_status = p_status where id = p_doctor and role = 'doctor';
+  return found;
+end;
+$$;
+
+grant execute on function public.set_doctor_verification(uuid, text) to authenticated;
 
