@@ -738,5 +738,44 @@ console.log('\n— Fulfillment: vendor mengubah status order-nya, bukan vendor l
   check('Vendor menyelesaikan shipped → delivered', del.rows[0]?.ok === true);
 }
 
+console.log('\n— Faskes: dokter gabung; admin lihat agregat, BUKAN data pasien —');
+{
+  const FID = 'fafafafa-0000-0000-0000-000000000001';
+  const FADMIN = 'fadfadfa-0000-0000-0000-000000000001';
+  // Setup superuser: faskes + admin faskes (anggota) + kode gabung.
+  await db.exec(`
+    insert into profiles(id, role, full_name) values ('${FADMIN}','faskes_admin','Admin Klinik');
+    insert into organizations(id, name, kind, join_code) values ('${FID}','Klinik Sehat','faskes','FASKES1');
+    insert into organization_members(organization_id, profile_id) values ('${FID}','${FADMIN}');
+  `);
+
+  // Carol (dokter) bergabung via kode.
+  const j = await asUser(U.carol, `select public.join_faskes('FASKES1') as fid`);
+  check('Dokter bergabung ke faskes via kode', j.rows[0]?.fid === FID);
+
+  // Non-dokter (Alice) tak bisa bergabung.
+  const jAlice = await asUser(U.alice, `select public.join_faskes('FASKES1') as fid`);
+  check('Non-dokter tidak bisa bergabung ke faskes', jAlice.rows[0]?.fid == null);
+
+  // Admin faskis melihat sesama anggota (dokternya).
+  const mem = await asUser(U.carol, `select organization_id from organization_members where organization_id='${FID}'`);
+  check('Anggota melihat sesama anggota faskes', mem.rows.length >= 1);
+
+  // Admin faskes: ringkasan agregat (Carol punya 1 konsultasi dgn Alice).
+  const s = await asUser(FADMIN, `select doctors, consultations from public.faskes_summary('${FID}')`);
+  check('Admin faskes melihat agregat (>=1 dokter, ada konsultasi)',
+    Number(s.rows[0]?.doctors) >= 1 && Number(s.rows[0]?.consultations) >= 1);
+
+  // FIREWALL: admin faskes TIDAK melihat isi konsultasi / reading pasien.
+  const cons = await asUser(FADMIN, `select id from consultations`);
+  check('Admin faskes TIDAK melihat baris konsultasi (RLS)', cons.rows.length === 0);
+  const reads = await asUser(FADMIN, `select id from health_readings`);
+  check('Admin faskes TIDAK melihat reading pasien', reads.rows.length === 0);
+
+  // Non-anggota (Bob) tak dapat agregat.
+  const s2 = await asUser(U.bob, `select doctors from public.faskes_summary('${FID}')`);
+  check('Non-anggota tidak mendapat agregat faskes', s2.rows.length === 0);
+}
+
 console.log(`\n=== RLS: ${passed} lulus, ${failed} gagal ===`);
 process.exit(failed === 0 ? 0 : 1);

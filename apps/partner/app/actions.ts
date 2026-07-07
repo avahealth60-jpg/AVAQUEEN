@@ -226,6 +226,31 @@ export async function updateListingStock(listingId: string, stock: number): Prom
   return { ok: true, message: 'Stok diperbarui.' };
 }
 
+// ── Faskes ───────────────────────────────────────────────────────
+export async function setFaskesJoinCode(_prev: JoinCodeResult | null, formData: FormData): Promise<JoinCodeResult> {
+  const auth = await getPartnerAuth();
+  if (auth.org?.kind !== 'faskes') return { ok: false, message: 'Hanya admin faskes.' };
+  const code = String(formData.get('code') ?? '').trim();
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('faskes_set_join_code', { p_faskes: auth.org.id, p_code: code });
+  if (error) return { ok: false, message: `Gagal: ${error.message}` };
+  if (!data) return { ok: false, message: 'Tidak berwenang.' };
+  revalidatePath('/');
+  return { ok: true, message: 'Kode gabung dokter diperbarui.', code: data as string };
+}
+
+/** Dokter bergabung ke faskes via kode. */
+export async function joinFaskes(code: string): Promise<ActionResult> {
+  const auth = await getPartnerAuth();
+  if (auth.role !== 'doctor') return { ok: false, message: 'Hanya dokter yang dapat bergabung.' };
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('join_faskes', { code: code.trim() });
+  if (error) return { ok: false, message: `Gagal: ${error.message}` };
+  if (!data) return { ok: false, message: 'Kode faskes tidak dikenal.' };
+  revalidatePath('/');
+  return { ok: true, message: 'Berhasil bergabung ke faskes.' };
+}
+
 // ── Konsultasi (sisi dokter) ─────────────────────────────────────
 export async function confirmConsultation(
   _prev: ActionResult | null,

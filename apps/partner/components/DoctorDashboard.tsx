@@ -5,6 +5,7 @@ import { PageHead, Empty } from './widgets';
 import { ConfirmForm, CompleteButton, DeclineButton } from './ConsultActions';
 import { NoteForm } from './NoteForm';
 import { ChatBox } from './ChatBox';
+import { JoinFaskesForm } from './JoinFaskesForm';
 
 const rupiah = (n: number) => 'Rp ' + Math.round(n).toLocaleString('id-ID');
 const STATUS: Record<string, [string, string]> = {
@@ -94,6 +95,8 @@ export async function DoctorDashboard({ name }: { name: string | null }) {
           </div>
         )}
       </div>
+
+      <div style={{ marginTop: 16 }}><JoinFaskesForm /></div>
     </>
   );
 }
