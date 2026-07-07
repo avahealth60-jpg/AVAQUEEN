@@ -1,14 +1,17 @@
 // Server component — armada vendor + form daftar alat. Data via RLS (klien sesi).
 import React from 'react';
 import { reminderStatus, badgeStatus } from '@ava/domain';
-import { vendorFleet, deviceModels } from '../lib/data';
+import { vendorFleet, deviceModels, vendorListings, vendorOrders } from '../lib/data';
 import { PageHead, QcTag, DueTag, BadgeTag, Empty } from './widgets';
 import { RegisterDeviceForm } from './RegisterDeviceForm';
 import { PublishListingForm } from './PublishListingForm';
+import { VendorListings } from './VendorListings';
+import { VendorOrders } from './VendorOrders';
 
 export async function VendorDashboard({ orgName }: { orgName: string | null }) {
   const now = new Date();
-  const [rows, models] = await Promise.all([vendorFleet(), deviceModels()]);
+  const [rows, models, listings, orders] = await Promise.all([vendorFleet(), deviceModels(), vendorListings(), vendorOrders()]);
+  const openOrders = orders.filter((o) => o.status === 'paid' || o.status === 'shipped').length;
   const verified = rows.filter((r) => r.badgeExpiresAt && badgeStatus(new Date(r.badgeExpiresAt), now) === 'active').length;
   const dueSoon = rows.filter((r) => r.nextDueAt && reminderStatus(new Date(r.nextDueAt), now) !== 'ok').length;
 
@@ -57,13 +60,23 @@ export async function VendorDashboard({ orgName }: { orgName: string | null }) {
         </div>
       </div>
 
+      <div className="grid2" style={{ marginTop: 16 }}>
+        <div className="card">
+          <div className="card__title">Pesanan masuk{openOrders > 0 ? ` · ${openOrders} perlu diproses` : ''}</div>
+          <VendorOrders orders={orders} />
+        </div>
+        <div className="card">
+          <div className="card__title">Tayangkan alat baru</div>
+          <p className="hint" style={{ marginBottom: 12 }}>
+            Badge "AVA Verified" muncul otomatis bila model ini punya badge aktif.
+          </p>
+          <PublishListingForm models={models} />
+        </div>
+      </div>
+
       <div className="card" style={{ marginTop: 16 }}>
-        <div className="card__title">Etalase toko (jual alat ber-badge)</div>
-        <p className="hint" style={{ marginBottom: 12 }}>
-          Tayangkan alatmu ke masyarakat. Listing dari model yang punya badge
-          AVA Verified aktif tampil bertanda terverifikasi otomatis.
-        </p>
-        <PublishListingForm models={models} />
+        <div className="card__title">Etalase kamu</div>
+        <VendorListings listings={listings} />
       </div>
     </>
   );

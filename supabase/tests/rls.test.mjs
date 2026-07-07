@@ -716,5 +716,27 @@ console.log('\n— Chat konsultasi: hanya peserta boleh baca & kirim —');
   check('Tak bisa mengirim atas nama peserta lain (sender terikat auth)', spoof);
 }
 
+console.log('\n— Fulfillment: vendor mengubah status order-nya, bukan vendor lain —');
+{
+  const OID = '0dd00000-0000-0000-0000-000000000001'; // order Alice (item vendor V1), sudah 'paid'
+  // Vendor V2 (Victor) BUKAN vendor order ini → ditolak.
+  const v2 = await asUser(U.victor, `select public.vendor_set_order_status('${OID}','shipped') as ok`);
+  check('Vendor lain TIDAK bisa mengubah status order', v2.rows[0]?.ok === false);
+
+  // Vendor V1 (Vance) → paid → shipped (sah).
+  const v1 = await asUser(U.vance, `select public.vendor_set_order_status('${OID}','shipped') as ok`);
+  check('Vendor pemilik item mengubah paid → shipped', v1.rows[0]?.ok === true);
+  const st = await asUser(U.vance, `select status from orders where id='${OID}'`);
+  check('Status order menjadi shipped', st.rows[0]?.status === 'shipped');
+
+  // Transisi tak sah shipped → paid ditolak.
+  const bad = await asUser(U.vance, `select public.vendor_set_order_status('${OID}','paid') as ok`);
+  check('Transisi order tak sah ditolak', bad.rows[0]?.ok === false);
+
+  // shipped → delivered (sah).
+  const del = await asUser(U.vance, `select public.vendor_set_order_status('${OID}','delivered') as ok`);
+  check('Vendor menyelesaikan shipped → delivered', del.rows[0]?.ok === true);
+}
+
 console.log(`\n=== RLS: ${passed} lulus, ${failed} gagal ===`);
 process.exit(failed === 0 ? 0 : 1);

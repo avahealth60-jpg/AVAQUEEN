@@ -189,6 +189,43 @@ export async function setJoinCode(
   return { ok: true, message: 'Kode gabung diperbarui.', code: data as string };
 }
 
+/** Vendor mengubah status pemenuhan pesanan (paid→shipped→delivered / cancel). */
+export async function setOrderStatus(orderId: string, status: string): Promise<ActionResult> {
+  const auth = await getPartnerAuth();
+  if (auth.role !== 'vendor') return { ok: false, message: 'Hanya vendor.' };
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('vendor_set_order_status', { p_order: orderId, p_status: status });
+  if (error) return { ok: false, message: error.message };
+  if (!data) return { ok: false, message: 'Perubahan status tidak diizinkan.' };
+  revalidatePath('/');
+  const LABEL: Record<string, string> = { shipped: 'dikirim', delivered: 'diterima', cancelled: 'dibatalkan' };
+  return { ok: true, message: `Pesanan ${LABEL[status] ?? status}.` };
+}
+
+/** Vendor menyalakan/mematikan listing (RLS "vendor manages own listings"). */
+export async function toggleListing(listingId: string, active: boolean): Promise<ActionResult> {
+  const auth = await getPartnerAuth();
+  if (auth.role !== 'vendor') return { ok: false, message: 'Hanya vendor.' };
+  const supabase = createClient();
+  const { error } = await supabase.from('product_listings')
+    .update({ status: active ? 'active' : 'inactive' }).eq('id', listingId);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath('/');
+  return { ok: true, message: active ? 'Listing ditayangkan.' : 'Listing disembunyikan.' };
+}
+
+export async function updateListingStock(listingId: string, stock: number): Promise<ActionResult> {
+  const auth = await getPartnerAuth();
+  if (auth.role !== 'vendor') return { ok: false, message: 'Hanya vendor.' };
+  const s = Math.trunc(Number(stock));
+  if (!Number.isInteger(s) || s < 0) return { ok: false, message: 'Stok tidak valid.' };
+  const supabase = createClient();
+  const { error } = await supabase.from('product_listings').update({ stock: s }).eq('id', listingId);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath('/');
+  return { ok: true, message: 'Stok diperbarui.' };
+}
+
 // ── Konsultasi (sisi dokter) ─────────────────────────────────────
 export async function confirmConsultation(
   _prev: ActionResult | null,
