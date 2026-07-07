@@ -5,7 +5,7 @@ import { getCustomerAuth } from '../../lib/auth';
 import { hasActiveConsent, wearableConsentActive, billingSummary, myProfile, linksAsPatient } from '../../lib/data';
 import { myConsultations } from '../../lib/consult';
 import { ConnBanner } from '../../components/ConnBanner';
-import { ConsentToggle, SignOutButton } from '../../components/AccountActions';
+import { ConsentToggle, SignOutButton, SignOutAllButton } from '../../components/AccountActions';
 import { ProfileForm } from '../../components/ProfileForm';
 import { DataPrivacy } from '../../components/DataPrivacy';
 
@@ -131,6 +131,10 @@ export default async function AkunPage() {
           </div>
         )}
       </div>
+
+      {/* Keamanan */}
+      <div className="section-h">Keamanan</div>
+      <SignOutAllButton />
 
       {/* Data & privasi */}
       <div className="section-h">Data & privasi</div>
