@@ -4,6 +4,7 @@ import { doctorConsultations, doctorEarnings } from '../lib/consult';
 import { PageHead, Empty } from './widgets';
 import { ConfirmForm, CompleteButton, DeclineButton } from './ConsultActions';
 import { NoteForm } from './NoteForm';
+import { ChatBox } from './ChatBox';
 
 const rupiah = (n: number) => 'Rp ' + Math.round(n).toLocaleString('id-ID');
 const STATUS: Record<string, [string, string]> = {
@@ -62,6 +63,7 @@ export async function DoctorDashboard({ name }: { name: string | null }) {
                       {c.scheduledAt && <div className="hint">Jadwal: {new Date(c.scheduledAt).toLocaleString('id-ID')}</div>}
                       {c.joinUrl && <div style={{ margin: '6px 0' }}><a className="link" href={c.joinUrl} target="_blank" rel="noreferrer">Buka ruang konsultasi →</a></div>}
                       <NoteForm id={c.id} initial={c.doctorNote} />
+                      <ChatBox consultationId={c.id} />
                       <div style={{ marginTop: 8 }}><CompleteButton id={c.id} /></div>
                     </div>
                   )}

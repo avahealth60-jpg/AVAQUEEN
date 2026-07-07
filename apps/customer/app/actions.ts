@@ -862,6 +862,35 @@ export async function rateConsultation(id: string, rating: number, comment: stri
   return { ok: true, message: 'Terima kasih atas penilaianmu!' };
 }
 
+// ── Chat konsultasi (D2) ─────────────────────────────────────────
+export interface ChatMessage { id: string; body: string; createdAt: string; mine: boolean; }
+
+export async function fetchConsultMessages(consultationId: string): Promise<ChatMessage[]> {
+  const { userId } = await getCustomerAuth();
+  if (!userId) return [];
+  const supabase = createClient();
+  const { data } = await supabase
+    .from('consultation_messages')
+    .select('id, sender_id, body, created_at')
+    .eq('consultation_id', consultationId)
+    .order('created_at', { ascending: true });
+  return ((data ?? []) as any[]).map((m) => ({
+    id: m.id, body: m.body, createdAt: m.created_at, mine: m.sender_id === userId,
+  }));
+}
+
+export async function sendConsultMessage(consultationId: string, body: string): Promise<{ ok: boolean; message: string }> {
+  const { userId } = await getCustomerAuth();
+  if (!userId) return { ok: false, message: 'Silakan masuk dulu.' };
+  const t = body.trim();
+  if (!t) return { ok: false, message: 'Pesan kosong.' };
+  const supabase = createClient();
+  const { error } = await supabase.from('consultation_messages')
+    .insert({ consultation_id: consultationId, sender_id: userId, body: t });
+  if (error) return { ok: false, message: error.message };
+  return { ok: true, message: '' };
+}
+
 export async function cancelConsultation(id: string): Promise<BookResult> {
   const { userId } = await getCustomerAuth();
   if (!userId) return { ok: false, message: 'Silakan masuk dulu.' };

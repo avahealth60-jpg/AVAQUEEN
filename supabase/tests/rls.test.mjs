@@ -685,5 +685,36 @@ console.log('\n— Push: langganan notifikasi terisolasi per pemilik —');
   check('Alice TIDAK melihat langganan push Bob', bobPeek.rows.length === 0);
 }
 
+console.log('\n— Chat konsultasi: hanya peserta boleh baca & kirim —');
+{
+  // Konsultasi Alice↔Carol sudah ada (eeeeeeee-...-001). Bob bukan peserta.
+  const CID = 'eeeeeeee-0000-0000-0000-000000000001';
+  await asUser(U.alice, `insert into consultation_messages(consultation_id, sender_id, body) values ('${CID}','${U.alice}','Halo dok')`);
+  await asUser(U.carol, `insert into consultation_messages(consultation_id, sender_id, body) values ('${CID}','${U.carol}','Halo, ada keluhan?')`);
+
+  const aliceSees = await asUser(U.alice, `select body from consultation_messages where consultation_id='${CID}'`);
+  check('Pasien membaca percakapan konsultasinya', aliceSees.rows.length === 2);
+  const carolSees = await asUser(U.carol, `select body from consultation_messages where consultation_id='${CID}'`);
+  check('Dokter membaca percakapan konsultasinya', carolSees.rows.length === 2);
+
+  // Bob (bukan peserta) tak melihat pesan.
+  const bobSees = await asUser(U.bob, `select id from consultation_messages where consultation_id='${CID}'`);
+  check('Non-peserta TIDAK melihat pesan konsultasi', bobSees.rows.length === 0);
+
+  // Bob tak bisa mengirim pesan ke konsultasi orang.
+  let bobSend = false;
+  try {
+    await asUser(U.bob, `insert into consultation_messages(consultation_id, sender_id, body) values ('${CID}','${U.bob}','nyelonong')`);
+  } catch { bobSend = true; }
+  check('Non-peserta TIDAK bisa mengirim pesan', bobSend);
+
+  // Alice tak bisa mengirim atas nama Carol (sender_id != auth.uid()).
+  let spoof = false;
+  try {
+    await asUser(U.alice, `insert into consultation_messages(consultation_id, sender_id, body) values ('${CID}','${U.carol}','pura-pura dokter')`);
+  } catch { spoof = true; }
+  check('Tak bisa mengirim atas nama peserta lain (sender terikat auth)', spoof);
+}
+
 console.log(`\n=== RLS: ${passed} lulus, ${failed} gagal ===`);
 process.exit(failed === 0 ? 0 : 1);

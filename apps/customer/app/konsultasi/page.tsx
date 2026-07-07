@@ -3,6 +3,7 @@ import React from 'react';
 import { getCustomerAuth } from '../../lib/auth';
 import { doctors, shareableReadings, myConsultations } from '../../lib/consult';
 import { RatingForm } from '../../components/RatingForm';
+import { ChatBox } from '../../components/ChatBox';
 import { ConsultBooking } from '../../components/ConsultBooking';
 import { ConnBanner } from '../../components/ConnBanner';
 
@@ -52,6 +53,7 @@ export default async function Konsultasi({ searchParams }: { searchParams: { sha
                       <p className="result__text" style={{ whiteSpace: 'pre-wrap' }}>{c.doctorNote}</p>
                     </div>
                   )}
+                  {(c.status === 'confirmed' || c.status === 'completed') && <ChatBox consultationId={c.id} />}
                   {c.status === 'completed' && <RatingForm id={c.id} current={c.rating} />}
                 </div>
                 <span className={`pill pill--${s.cls}`}>{s.label}</span>

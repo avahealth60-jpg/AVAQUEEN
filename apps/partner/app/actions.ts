@@ -100,6 +100,36 @@ export async function submitCalibration(
   };
 }
 
+// ── Chat konsultasi (D2, sisi dokter) ────────────────────────────
+export interface ChatMessage { id: string; body: string; createdAt: string; mine: boolean; }
+
+export async function fetchConsultMessages(consultationId: string): Promise<ChatMessage[]> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data } = await supabase
+    .from('consultation_messages')
+    .select('id, sender_id, body, created_at')
+    .eq('consultation_id', consultationId)
+    .order('created_at', { ascending: true });
+  return ((data ?? []) as { id: string; sender_id: string; body: string; created_at: string }[])
+    .map((m) => ({ id: m.id, body: m.body, createdAt: m.created_at, mine: m.sender_id === user.id }));
+}
+
+export async function sendConsultMessage(consultationId: string, body: string): Promise<{ ok: boolean; message: string }> {
+  const auth = await getPartnerAuth();
+  if (auth.role !== 'doctor') return { ok: false, message: 'Hanya dokter yang dapat mengirim.' };
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: 'Silakan masuk dulu.' };
+  const t = body.trim();
+  if (!t) return { ok: false, message: 'Pesan kosong.' };
+  const { error } = await supabase.from('consultation_messages')
+    .insert({ consultation_id: consultationId, sender_id: user.id, body: t });
+  if (error) return { ok: false, message: error.message };
+  return { ok: true, message: '' };
+}
+
 // ── Marketplace (sisi vendor) ────────────────────────────────────
 /** Vendor memasang listing alat ke etalase. Verifikasi "AVA Verified"
  *  diturunkan otomatis dari badge aktif (fungsi verified_listing_ids). */
