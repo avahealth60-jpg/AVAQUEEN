@@ -19,7 +19,8 @@ from (values
   ('caregiver_links'),
   ('subscriptions'),('payments'),
   ('product_listings'),('orders'),('order_items'),
-  ('employer_enrollments')
+  ('employer_enrollments'),
+  ('consultation_messages'),('push_subscriptions')
 ) t(name)
 order by status desc, tabel;
 
@@ -35,7 +36,10 @@ from (values
   ('verified_listing_ids'),('owns_order'),('vendor_in_order'),
   ('join_employer'),('employer_wellness_summary'),('set_employer_join_code'),
   ('guard_profile_update'),('delete_my_account'),
-  ('current_role'),('is_member_of'),('is_admin')
+  ('current_role'),('is_member_of'),('is_admin'),
+  ('is_consult_participant'),('vendor_set_order_status'),
+  ('join_faskes'),('faskes_set_join_code'),('faskes_summary'),
+  ('set_doctor_verification')
 ) f(name)
 order by status desc, fungsi;
 
@@ -47,7 +51,8 @@ select c.tbl || '.' || c.col as kolom,
        ) then '✅ ada' else '❌ HILANG' end as status
 from (values
   ('profiles','birth_date'),('profiles','sex'),('profiles','height_cm'),('profiles','weight_kg'),
-  ('consultations','doctor_note'),('consultations','fee'),
+  ('profiles','str_no'),('profiles','sip_no'),('profiles','doctor_status'),
+  ('consultations','doctor_note'),('consultations','fee'),('consultations','rating'),
   ('organizations','join_code'),
   ('payments','purpose'),('payments','status')
 ) c(tbl,col)
