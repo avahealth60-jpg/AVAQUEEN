@@ -1,5 +1,5 @@
 -- ============================================================================
--- AVA Health — SETUP DB LENGKAP (semua migrasi 0001–v120, berurutan)
+-- AVA Health — SETUP DB LENGKAP (semua migrasi 0001–v122, berurutan)
 -- Cara pakai: buka Supabase Dashboard → SQL Editor → tempel SELURUH file ini
 -- → Run. Aman diulang (idempoten: create if not exists / drop policy if exists).
 -- Auth (auth.uid/jwt, roles anon/authenticated/service_role) sudah disediakan
@@ -1688,4 +1688,41 @@ grant execute on function public.delete_my_account() to authenticated;
 -- ("customer sees own consultations"), dan dokter menulis via
 -- "doctor updates assigned consultation".
 alter table consultations add column if not exists doctor_note text;
+
+
+-- ┌──────────────────────────────────────────────────────────────────────────
+-- │ migrations/20260705180000_v121_consult_rating.sql
+-- └──────────────────────────────────────────────────────────────────────────
+-- 20260705180000_v121_consult_rating.sql
+-- Rating pasien untuk konsultasi (1–5) + komentar opsional.
+-- Tak perlu RLS baru: pasien menulis via "customer updates own consultation",
+-- dokter membaca via "doctor sees assigned consultations".
+alter table consultations add column if not exists rating int check (rating between 1 and 5);
+alter table consultations add column if not exists rating_comment text;
+
+
+-- ┌──────────────────────────────────────────────────────────────────────────
+-- │ migrations/20260705190000_v122_push_subscriptions.sql
+-- └──────────────────────────────────────────────────────────────────────────
+-- 20260705190000_v122_push_subscriptions.sql
+-- Web Push (E1): simpan langganan push browser per pengguna.
+-- Pengiriman dilakukan Edge Function (send-push) ber-service_role memakai VAPID.
+create table if not exists push_subscriptions (
+  id          uuid primary key default gen_random_uuid(),
+  customer_id uuid not null references profiles(id) on delete cascade,
+  endpoint    text not null unique,
+  p256dh      text not null,
+  auth        text not null,
+  created_at  timestamptz not null default now()
+);
+create index if not exists idx_push_subs_customer on push_subscriptions(customer_id);
+
+alter table push_subscriptions enable row level security;
+
+-- Pemilik mengelola langganan push-nya sendiri.
+drop policy if exists "customer manages own push subs" on push_subscriptions;
+create policy "customer manages own push subs" on push_subscriptions
+  for all using (customer_id = auth.uid()) with check (customer_id = auth.uid());
+
+grant select, insert, update, delete on push_subscriptions to authenticated;
 
