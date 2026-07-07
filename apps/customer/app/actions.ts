@@ -528,6 +528,34 @@ export async function leaveCaregiver(linkId: string): Promise<CaregiverActionRes
   return { ok: true, message: 'Kamu berhenti mendampingi.' };
 }
 
+// ── Web Push (E1) ────────────────────────────────────────────────
+export interface PushResult { ok: boolean; message: string; }
+
+export async function savePushSubscription(sub: { endpoint: string; p256dh: string; auth: string }): Promise<PushResult> {
+  const { userId } = await getCustomerAuth();
+  if (!userId) return { ok: false, message: 'Silakan masuk dulu.' };
+  if (!sub?.endpoint || !sub.p256dh || !sub.auth) return { ok: false, message: 'Langganan tidak valid.' };
+  const supabase = createClient();
+  const { error } = await supabase.from('push_subscriptions').upsert(
+    { customer_id: userId, endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth },
+    { onConflict: 'endpoint' },
+  );
+  if (error) return { ok: false, message: `Gagal menyimpan: ${error.message}` };
+  revalidatePath('/notifikasi');
+  return { ok: true, message: 'Notifikasi push aktif.' };
+}
+
+export async function removePushSubscription(endpoint: string): Promise<PushResult> {
+  const { userId } = await getCustomerAuth();
+  if (!userId) return { ok: false, message: 'Silakan masuk dulu.' };
+  const supabase = createClient();
+  const { error } = await supabase.from('push_subscriptions')
+    .delete().eq('endpoint', endpoint).eq('customer_id', userId);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath('/notifikasi');
+  return { ok: true, message: 'Notifikasi push dimatikan.' };
+}
+
 // ── Notifikasi (Fase C) ──────────────────────────────────────────
 export interface NotifResult { ok: boolean; message: string; }
 
