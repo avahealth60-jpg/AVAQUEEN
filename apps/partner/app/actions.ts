@@ -226,6 +226,20 @@ export async function updateListingStock(listingId: string, stock: number): Prom
   return { ok: true, message: 'Stok diperbarui.' };
 }
 
+// ── Kredensial dokter (STR/SIP) ──────────────────────────────────
+export async function saveDoctorCredentials(strNo: string, sipNo: string): Promise<ActionResult> {
+  const auth = await getPartnerAuth();
+  if (auth.role !== 'doctor') return { ok: false, message: 'Hanya dokter.' };
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: 'Silakan masuk dulu.' };
+  const { error } = await supabase.from('profiles')
+    .update({ str_no: strNo.trim() || null, sip_no: sipNo.trim() || null }).eq('id', user.id);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath('/');
+  return { ok: true, message: 'Kredensial tersimpan. Menunggu verifikasi admin.' };
+}
+
 // ── Faskes ───────────────────────────────────────────────────────
 export async function setFaskesJoinCode(_prev: JoinCodeResult | null, formData: FormData): Promise<JoinCodeResult> {
   const auth = await getPartnerAuth();

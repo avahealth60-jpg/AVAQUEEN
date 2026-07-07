@@ -23,6 +23,7 @@ const GROUPS: Group[] = [
     title: 'Jaringan',
     items: [
       { href: '/mitra', label: 'Mitra' },
+      { href: '/verifikasi', label: 'Verifikasi dokter' },
     ],
   },
   {

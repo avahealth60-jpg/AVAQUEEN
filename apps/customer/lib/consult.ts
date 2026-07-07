@@ -6,7 +6,9 @@ import { metricLabel } from './catalog';
 export interface DoctorOption { id: string; name: string; }
 export async function doctors(): Promise<DoctorOption[]> {
   const supabase = createClient();
-  const { data } = await supabase.from('profiles').select('id, full_name').eq('role', 'doctor').order('full_name');
+  // Hanya dokter TERVERIFIKASI (STR/SIP disetujui admin) yang bisa dibooking.
+  const { data } = await supabase.from('profiles').select('id, full_name')
+    .eq('role', 'doctor').eq('doctor_status', 'verified').order('full_name');
   return ((data ?? []) as { id: string; full_name: string | null }[]).map((d) => ({ id: d.id, name: d.full_name ?? 'Dokter' }));
 }
 

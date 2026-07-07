@@ -1,11 +1,12 @@
 // Server components — seksi dokter: Konsultasi, Riwayat & pendapatan, Faskes.
 import React from 'react';
-import { doctorConsultations, doctorEarnings } from '../lib/consult';
+import { doctorConsultations, doctorEarnings, doctorProfile } from '../lib/consult';
 import { PageHead, Empty } from './widgets';
 import { ConfirmForm, CompleteButton, DeclineButton } from './ConsultActions';
 import { NoteForm } from './NoteForm';
 import { ChatBox } from './ChatBox';
 import { JoinFaskesForm } from './JoinFaskesForm';
+import { DoctorCredentials } from './DoctorCredentials';
 
 const rupiah = (n: number) => 'Rp ' + Math.round(n).toLocaleString('id-ID');
 const STATUS: Record<string, [string, string]> = {
@@ -18,7 +19,7 @@ const triageCls: Record<string, string> = { normal: 'pill--ok', perhatian: 'pill
 
 // ── Konsultasi (/) ───────────────────────────────────────────────
 export async function DoctorConsults({ name }: { name: string | null }) {
-  const [list, earn] = await Promise.all([doctorConsultations(), doctorEarnings()]);
+  const [list, earn, prof] = await Promise.all([doctorConsultations(), doctorEarnings(), doctorProfile()]);
   const active = list.filter((c) => c.status === 'requested' || c.status === 'confirmed');
   const rated = list.filter((c) => c.rating != null);
   const avgRating = rated.length ? (rated.reduce((s, c) => s + (c.rating ?? 0), 0) / rated.length) : null;
@@ -27,6 +28,9 @@ export async function DoctorConsults({ name }: { name: string | null }) {
     <>
       <PageHead eyebrow="Dokter" title={name ? `Praktik · ${name}` : 'Konsultasi'}
         sub="Permintaan konsultasi & ruang praktik. Balas pasien lewat chat." />
+
+      {prof.status !== 'verified' && <DoctorCredentials strNo={prof.strNo} sipNo={prof.sipNo} status={prof.status} />}
+
       <div className="tiles">
         <div className="tile"><div className="tile__label">Permintaan & terjadwal</div><div className="tile__num">{active.length}</div></div>
         <div className="tile"><div className="tile__label">Selesai</div><div className="tile__num">{earn.completed}</div></div>

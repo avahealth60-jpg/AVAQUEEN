@@ -777,5 +777,26 @@ console.log('\n— Faskes: dokter gabung; admin lihat agregat, BUKAN data pasien
   check('Non-anggota tidak mendapat agregat faskes', s2.rows.length === 0);
 }
 
+console.log('\n— Verifikasi dokter: dokter isi STR/SIP, hanya ADMIN memverifikasi —');
+{
+  // Carol (dokter) mengisi STR/SIP-nya (boleh) tapi coba self-verify (diblokir).
+  await asUser(U.carol, `update profiles set str_no='STR-123', sip_no='SIP-456', doctor_status='verified' where id='${U.carol}'`);
+  const self = await asUser(U.carol, `select str_no, doctor_status from profiles where id='${U.carol}'`);
+  check('Dokter bisa mengisi STR/SIP', self.rows[0]?.str_no === 'STR-123');
+  check('Dokter TIDAK bisa memverifikasi dirinya sendiri', self.rows[0]?.doctor_status === 'pending');
+
+  // Non-admin (Bob) tak bisa memverifikasi lewat fungsi.
+  const bob = await asUser(U.bob, `select public.set_doctor_verification('${U.carol}','verified') as ok`);
+  check('Non-admin tidak bisa memverifikasi dokter', bob.rows[0]?.ok === false);
+
+  // Admin (perlu user ava_admin). Buat admin sementara.
+  const ADM = 'adadadad-0000-0000-0000-000000000001';
+  await db.exec(`insert into profiles(id, role, full_name) values ('${ADM}','ava_admin','AVA Admin')`);
+  const adm = await asUser(ADM, `select public.set_doctor_verification('${U.carol}','verified') as ok`);
+  check('Admin memverifikasi dokter', adm.rows[0]?.ok === true);
+  const after = await asUser(U.carol, `select doctor_status from profiles where id='${U.carol}'`);
+  check('Status dokter menjadi verified', after.rows[0]?.doctor_status === 'verified');
+}
+
 console.log(`\n=== RLS: ${passed} lulus, ${failed} gagal ===`);
 process.exit(failed === 0 ? 0 : 1);

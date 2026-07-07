@@ -59,6 +59,15 @@ export async function doctorConsultations(): Promise<DoctorConsult[]> {
   }));
 }
 
+export interface DoctorProfile { strNo: string | null; sipNo: string | null; status: string; }
+export async function doctorProfile(): Promise<DoctorProfile> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { strNo: null, sipNo: null, status: 'pending' };
+  const { data } = await supabase.from('profiles').select('str_no, sip_no, doctor_status').eq('id', user.id).maybeSingle();
+  return { strNo: data?.str_no ?? null, sipNo: data?.sip_no ?? null, status: data?.doctor_status ?? 'pending' };
+}
+
 export interface DoctorEarnings { completed: number; gross: number; avaCut: number; net: number; }
 export async function doctorEarnings(): Promise<DoctorEarnings> {
   const supabase = createClient();
