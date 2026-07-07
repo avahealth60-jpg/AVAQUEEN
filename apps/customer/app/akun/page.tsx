@@ -2,7 +2,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { getCustomerAuth } from '../../lib/auth';
-import { hasActiveConsent, wearableConsentActive, billingSummary, myProfile } from '../../lib/data';
+import { hasActiveConsent, wearableConsentActive, billingSummary, myProfile, linksAsPatient } from '../../lib/data';
+import { myConsultations } from '../../lib/consult';
 import { ConnBanner } from '../../components/ConnBanner';
 import { ConsentToggle, SignOutButton } from '../../components/AccountActions';
 import { ProfileForm } from '../../components/ProfileForm';
@@ -25,9 +26,13 @@ export default async function AkunPage() {
   const auth = await getCustomerAuth();
   if (!auth.configured) return <div className="screen"><ConnBanner /></div>;
 
-  const [consent, wearable, billing, profile] = await Promise.all([
+  const [consent, wearable, billing, profile, caregivers, consults] = await Promise.all([
     hasActiveConsent(), wearableConsentActive(), billingSummary(), myProfile(),
+    linksAsPatient(), myConsultations(),
   ]);
+  const activeCaregivers = caregivers.filter((c) => c.status === 'active');
+  const sharingDoctors = consults.filter((c) => c.sharedCount > 0 && c.status !== 'cancelled');
+  const SCOPE_LABEL: Record<string, string> = { readings: 'Hasil', wellness: 'Wellness', consultations: 'Konsultasi' };
 
   return (
     <div className="screen">
@@ -94,6 +99,37 @@ export default async function AkunPage() {
             <span aria-hidden style={{ fontSize: 20, color: 'var(--ava-color-trust-600)' }}>→</span>
           </Link>
         ))}
+      </div>
+
+      {/* Siapa yang bisa melihat datamu (transparansi) */}
+      <div className="section-h">Siapa yang bisa melihat datamu</div>
+      <div className="card">
+        {activeCaregivers.length === 0 && sharingDoctors.length === 0 ? (
+          <div style={{ fontSize: 14, color: 'var(--ava-color-ink-500)' }}>
+            Hanya kamu. Belum ada pendamping atau dokter yang kamu beri akses.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: 10 }}>
+            {activeCaregivers.map((c) => (
+              <div className="read" key={c.id}>
+                <div className="read__main">
+                  <div className="read__label">Pendamping</div>
+                  <div className="read__meta">Akses: {c.scopes.map((s) => SCOPE_LABEL[s] ?? s).join(', ')}</div>
+                </div>
+                <Link className="btn btn--ghost" href="/pendamping" style={{ width: 'auto', textDecoration: 'none' }}>Kelola</Link>
+              </div>
+            ))}
+            {sharingDoctors.map((c) => (
+              <div className="read" key={c.id}>
+                <div className="read__main">
+                  <div className="read__label">{c.doctorName}</div>
+                  <div className="read__meta">Dokter · {c.sharedCount} hasil dibagikan untuk konsultasi</div>
+                </div>
+                <span className="pill pill--normal">Dokter</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Data & privasi */}
