@@ -72,6 +72,7 @@ export interface SubmitResult {
   explanation?: string;
   disclaimer?: string;
   suggestConsultation?: boolean;
+  readingId?: string;
   // Evaluasi komprehensif dari basis pengetahuan terkurasi (bila tersedia).
   artinya?: string;
   penyebab?: string;
@@ -143,6 +144,7 @@ export async function submitReading(
     explanation: draft.explanation,
     disclaimer: draft.disclaimer,
     suggestConsultation: draft.suggest_consultation,
+    readingId: reading.id,
     artinya: knowledge?.artinya,
     penyebab: knowledge?.penyebab ?? undefined,
     saran: knowledge?.saran ?? undefined,
@@ -816,6 +818,20 @@ export async function bookConsultation(
   revalidatePath('/konsultasi');
   const hemat = pricing.discount > 0 ? ` (hemat Rp${pricing.discount.toLocaleString('id-ID')} berkat Premium)` : '';
   return { ok: true, message: `Permintaan konsultasi terkirim${hemat}. Menunggu konfirmasi dokter.` };
+}
+
+export async function rateConsultation(id: string, rating: number, comment: string): Promise<BookResult> {
+  const { userId } = await getCustomerAuth();
+  if (!userId) return { ok: false, message: 'Silakan masuk dulu.' };
+  const r = Math.trunc(Number(rating));
+  if (r < 1 || r > 5) return { ok: false, message: 'Beri rating 1–5.' };
+  const supabase = createClient();
+  const { error } = await supabase.from('consultations')
+    .update({ rating: r, rating_comment: comment.trim() || null })
+    .eq('id', id).eq('customer_id', userId);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath('/konsultasi');
+  return { ok: true, message: 'Terima kasih atas penilaianmu!' };
 }
 
 export async function cancelConsultation(id: string): Promise<BookResult> {

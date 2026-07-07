@@ -2,6 +2,7 @@
 import React from 'react';
 import { getCustomerAuth } from '../../lib/auth';
 import { doctors, shareableReadings, myConsultations } from '../../lib/consult';
+import { RatingForm } from '../../components/RatingForm';
 import { ConsultBooking } from '../../components/ConsultBooking';
 import { ConnBanner } from '../../components/ConnBanner';
 
@@ -14,7 +15,7 @@ const STATUS: Record<string, { label: string; cls: string }> = {
   cancelled: { label: 'Dibatalkan', cls: 'none' },
 };
 
-export default async function Konsultasi() {
+export default async function Konsultasi({ searchParams }: { searchParams: { share?: string } }) {
   const { configured } = await getCustomerAuth();
   if (!configured) return <div className="screen"><ConnBanner /></div>;
 
@@ -25,7 +26,7 @@ export default async function Konsultasi() {
       <h1 className="hello">Konsultasi</h1>
       <p>Bicara dengan dokter dan bagikan hasil pilihanmu.</p>
 
-      <div className="card"><ConsultBooking doctors={docs} readings={readings} /></div>
+      <div className="card"><ConsultBooking doctors={docs} readings={readings} preselect={searchParams.share} /></div>
 
       <div className="section-h">Konsultasimu</div>
       {list.length === 0 ? (
@@ -51,6 +52,7 @@ export default async function Konsultasi() {
                       <p className="result__text" style={{ whiteSpace: 'pre-wrap' }}>{c.doctorNote}</p>
                     </div>
                   )}
+                  {c.status === 'completed' && <RatingForm id={c.id} current={c.rating} />}
                 </div>
                 <span className={`pill pill--${s.cls}`}>{s.label}</span>
               </div>
