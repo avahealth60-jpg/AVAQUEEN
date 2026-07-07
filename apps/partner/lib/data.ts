@@ -87,6 +87,25 @@ export async function labCalibrationHistory(): Promise<CalibrationRow[]> {
   }));
 }
 
+export interface LabBadgeRow { serial: string; status: string; issuedAt: string; expiresAt: string; }
+/** Badge yang terbit dari kalibrasi lab ini. */
+export async function labBadges(): Promise<LabBadgeRow[]> {
+  const supabase = createClient();
+  const { data: cals } = await supabase.from('calibrations').select('id, device_id'); // RLS: lab ini
+  const rows = (cals ?? []) as { id: string; device_id: string }[];
+  if (rows.length === 0) return [];
+  const calIds = rows.map((c) => c.id);
+  const devIds = [...new Set(rows.map((c) => c.device_id))];
+  const [bRes, dRes] = await Promise.all([
+    supabase.from('badges').select('device_id, calibration_id, status, issued_at, expires_at').in('calibration_id', calIds),
+    supabase.from('devices').select('id, serial').in('id', devIds),
+  ]);
+  const serial = new Map(((dRes.data ?? []) as { id: string; serial: string }[]).map((d) => [d.id, d.serial]));
+  return ((bRes.data ?? []) as { device_id: string; status: string; issued_at: string; expires_at: string }[])
+    .map((b) => ({ serial: serial.get(b.device_id) ?? '—', status: b.status, issuedAt: b.issued_at, expiresAt: b.expires_at }))
+    .sort((a, b) => (a.expiresAt > b.expiresAt ? -1 : 1));
+}
+
 export interface LabDeviceRow {
   id: string;
   serial: string;
