@@ -2,7 +2,7 @@
 // apps/customer/components/WellnessCard.tsx — satu program wellness + progres.
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { enrollWellness, leaveWellness, checkinWellness } from '../app/actions';
+import { enrollWellness, leaveWellness, checkinWellness, logActivity } from '../app/actions';
 import type { ProgramCard } from '../lib/data';
 
 const STATUS: Record<string, { label: string; bg: string; fg: string }> = {
@@ -65,6 +65,32 @@ export function WellnessCard({ card }: { card: ProgramCard }) {
 
   const st = summary ? STATUS[summary.status] ?? STATUS.behind : null;
 
+  // Konfigurasi input pemicu per jenis metrik program.
+  const inputCfg: { unit: string; placeholder: string; button: string; hint: string; submit: (v: number) => Promise<{ ok: boolean; message: string }> } =
+    isManual
+      ? {
+          unit: program.unit, placeholder: `Tambah ${program.unit}`, button: 'Catat',
+          hint: 'Belum check-in hari ini — yuk catat sekarang.',
+          submit: (v) => checkinWellness(program.code, v),
+        }
+      : program.metric === 'sleep_minutes'
+        ? {
+            unit: 'jam', placeholder: 'Tidur tadi malam (jam)', button: 'Catat tidur',
+            hint: 'Belum catat tidur hari ini — berapa jam tadi malam?',
+            submit: (v) => logActivity('sleep_minutes', Math.round(v * 60)),
+          }
+        : program.metric === 'active_minutes'
+          ? {
+              unit: 'menit', placeholder: 'Menit aktif hari ini', button: 'Catat',
+              hint: 'Target menit aktif belum tercapai — catat aktivitasmu.',
+              submit: (v) => logActivity('active_minutes', v),
+            }
+          : { // steps (default gaya hidup)
+              unit: 'langkah', placeholder: 'Langkah hari ini', button: 'Catat',
+              hint: 'Target langkah belum tercapai — catat progresmu.',
+              submit: (v) => logActivity('steps', v),
+            };
+
   return (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
@@ -95,27 +121,27 @@ export function WellnessCard({ card }: { card: ProgramCard }) {
 
           {!metToday && (
             <div className="note" style={{ background: 'var(--brand-bg)', color: 'var(--brand-ink)', marginTop: 10 }}>
-              {isManual ? 'Belum check-in hari ini — yuk catat sekarang.' : 'Target hari ini belum tercapai — sedikit lagi!'}
+              {inputCfg.hint}
             </div>
           )}
 
-          {isManual && (
-            <div className="row2" style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-              <div className="suffix" style={{ flex: 1 }}>
-                <input
-                  className="input" type="number" inputMode="numeric" placeholder={`Tambah ${program.unit}`}
-                  value={amount} onChange={(e) => setAmount(e.target.value)}
-                />
-                <span className="unit">{program.unit}</span>
-              </div>
-              <button
-                className="btn" disabled={busy || !amount}
-                onClick={() => { run(() => checkinWellness(program.code, Number(amount))); setAmount(''); }}
-              >
-                Catat
-              </button>
+          {/* Setiap program aktif punya input pemicu: manual (check-in) atau
+              gaya hidup (langkah/tidur/menit aktif → logActivity). */}
+          <div className="row2" style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+            <div className="suffix" style={{ flex: 1 }}>
+              <input
+                className="input" type="number" inputMode="decimal" placeholder={inputCfg.placeholder}
+                value={amount} onChange={(e) => setAmount(e.target.value)}
+              />
+              <span className="unit">{inputCfg.unit}</span>
             </div>
-          )}
+            <button
+              className="btn" disabled={busy || !amount}
+              onClick={() => { const v = Number(amount); setAmount(''); run(() => inputCfg.submit(v)); }}
+            >
+              {inputCfg.button}
+            </button>
+          </div>
 
           <button className="btn btn--ghost" style={{ marginTop: 10 }} disabled={busy}
             onClick={() => run(() => leaveWellness(program.code))}>
