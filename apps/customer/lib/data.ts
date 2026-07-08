@@ -8,6 +8,7 @@ import {
   isAutoTracked,
   aggregateDaily,
   wellnessNudges,
+  wellnessScore,
   effectivePlan,
   type Triage,
   type WellnessProgram,
@@ -466,6 +467,70 @@ export async function achievementStats(): Promise<{
     premium: billing.effective === 'premium',
     consultsCompleted: consults.filter((c) => c.status === 'completed').length,
   };
+}
+
+// ── Beranda premium (Home dashboard) ─────────────────────────────
+export interface HomeMetric {
+  key: string; label: string; icon: string;
+  value: string; unit: string; series: number[]; triage: Triage | null; hasData: boolean;
+}
+export interface HomeData {
+  score: { score: number; label: string };
+  metrics: HomeMetric[];
+  progress: { done: number; total: number; pct: number };
+  streak: number;
+}
+
+function fmtSleep(min: number): string {
+  const h = Math.floor(min / 60); const m = Math.round(min % 60);
+  return m ? `${h}j ${m}m` : `${h}j`;
+}
+const CLINICAL = new Set(['glucose_fasting', 'spo2', 'heart_rate', 'temperature', 'blood_pressure', 'bp_systolic']);
+
+/** Data ringkas untuk beranda: skor wellness, kartu metrik, progres. */
+export async function homeData(): Promise<HomeData> {
+  const [rows, cards] = await Promise.all([readings(), wellnessDashboard()]);
+
+  // Kumpulan nilai per tipe (lama→baru untuk sparkline).
+  const byType = new Map<string, { value: number; triage: Triage | null }[]>();
+  for (const r of [...rows].reverse()) {
+    const n = Number(r.display);
+    if (Number.isNaN(n)) continue;
+    const arr = byType.get(r.type) ?? [];
+    arr.push({ value: n, triage: r.triage });
+    byType.set(r.type, arr);
+  }
+  const seriesOf = (t: string) => (byType.get(t) ?? []).slice(-12);
+  const latestOf = (t: string) => { const s = byType.get(t); return s && s.length ? s[s.length - 1]! : null; };
+
+  const metric = (key: string, label: string, icon: string, unit: string, fmt?: (n: number) => string): HomeMetric => {
+    const last = latestOf(key);
+    const s = seriesOf(key);
+    return {
+      key, label, icon, unit,
+      value: last ? (fmt ? fmt(last.value) : last.value.toLocaleString('id-ID')) : '—',
+      series: s.map((x) => x.value), triage: last?.triage ?? null, hasData: !!last,
+    };
+  };
+
+  const metrics: HomeMetric[] = [
+    metric('heart_rate', 'Detak jantung', 'heart', 'bpm'),
+    metric('sleep_minutes', 'Tidur', 'moon', '', fmtSleep),
+    metric('steps', 'Langkah', 'steps', ''),
+    metric('spo2', 'SpO₂', 'drop', '%'),
+  ];
+
+  // Skor wellness dari sinyal nyata.
+  const recentTriages = rows.filter((r) => CLINICAL.has(r.type) && r.triage).slice(0, 20).map((r) => r.triage!) as any;
+  const streak = cards.reduce((m, c) => Math.max(m, c.summary?.streak ?? 0), 0);
+  const activeMetrics = byType.size;
+  const score = wellnessScore({ recentTriages, streak, activeMetrics });
+
+  // Progres pemeriksaan: cakupan 30 hari terhadap target ringan.
+  const done = Math.min(rows.length, 20);
+  const progress = { done, total: 20, pct: Math.round((done / 20) * 100) };
+
+  return { score, metrics, progress, streak };
 }
 
 /** Nudge wellness "hidup" (dihitung, tidak disimpan) dari program aktif. */

@@ -7,13 +7,14 @@
 :root {
   --ink:var(--ava-color-ink-900); --ink-2:var(--ava-color-ink-700); --muted:var(--ava-color-ink-500);
   --line:var(--ava-color-line); --surface:var(--ava-color-surface-0); --app-bg:var(--ava-color-surface-50);
-  --brand:var(--ava-color-trust-600); --brand-ink:var(--ava-color-trust-900); --brand-bg:var(--ava-color-trust-100);
+  /* Aksen premium emerald/teal (mockup). */
+  --brand:#14B89A; --brand-ink:#0F8B73; --brand-bg:color-mix(in srgb,#14B89A 12%,var(--surface));
 
   --normal:var(--ava-triage-normal-fg); --normal-bg:var(--ava-triage-normal-bg);
   --perhatian:var(--ava-triage-perhatian-fg); --perhatian-bg:var(--ava-triage-perhatian-bg);
   --segera:var(--ava-triage-segera-fg); --segera-bg:var(--ava-triage-segera-bg);
 
-  --r:16px;
+  --r:24px;
   --sans:var(--ava-font-body,system-ui),-apple-system,"Segoe UI",Roboto,sans-serif;
 }
 *{box-sizing:border-box;} html,body{margin:0;padding:0;}
@@ -156,3 +157,69 @@ body{font-family:var(--sans);color:var(--ink);background:var(--app-bg);-webkit-f
 .check .muted{color:var(--muted);font-size:12px;}
 .join{display:inline-block;margin-top:6px;color:var(--brand-ink);font-weight:700;font-size:14px;text-decoration:none;}
 .join:hover{text-decoration:underline;}
+
+/* ═══════════════════ BERANDA PREMIUM (redesign) ═══════════════════ */
+/* Hero sapaan */
+.hero{display:flex;align-items:center;gap:12px;padding:10px 0 14px;}
+.hero__avatar{width:44px;height:44px;border-radius:14px;flex:none;display:grid;place-items:center;
+  font-weight:800;font-size:18px;color:#fff;background:linear-gradient(140deg,#14B89A,#0F8B73);
+  box-shadow:0 6px 16px -6px color-mix(in srgb,#14B89A 60%,transparent);}
+.hero__mid{flex:1;min-width:0;line-height:1.2;}
+.hero__greet{font-size:13px;color:var(--muted);}
+.hero__name{font-size:19px;font-weight:800;color:var(--ink);letter-spacing:-.01em;}
+.hero__status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-top:3px;}
+.hero__statusdot{width:7px;height:7px;border-radius:999px;background:var(--brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 22%,transparent);}
+.hero__bell{position:relative;width:42px;height:42px;flex:none;border-radius:13px;display:grid;place-items:center;
+  color:var(--ink);background:var(--surface);border:1px solid var(--line);text-decoration:none;}
+.hero__badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;
+  background:#FF5A7A;color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;}
+
+/* Kartu skor wellness (hero gelap, selalu gelap seperti mockup) */
+.score-card{display:flex;align-items:center;justify-content:space-between;gap:14px;
+  background:radial-gradient(120% 120% at 80% -10%,#12463C 0%,#0C2A25 55%,#0A211D 100%);
+  border:1px solid rgba(110,231,199,.14);border-radius:26px;padding:20px;margin-bottom:14px;color:#EAF6F1;
+  box-shadow:0 18px 40px -22px rgba(0,0,0,.6);position:relative;overflow:hidden;}
+.score-card__title{font-size:13px;color:#9FC7BB;font-weight:600;}
+.score-card__num{font-size:52px;font-weight:800;letter-spacing:-.02em;line-height:1;margin:6px 0 2px;
+  background:linear-gradient(120deg,#EAF6F1,#8FE7CE);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.score-card__label{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#6EE7C7;font-weight:700;}
+.score-card__dot{width:7px;height:7px;border-radius:999px;background:#6EE7C7;}
+.score-card__detail{display:inline-block;margin-top:12px;font-size:13px;font-weight:700;color:#C9EFE3;text-decoration:none;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);padding:7px 12px;border-radius:12px;}
+.score-card__ring{flex:none;filter:drop-shadow(0 6px 16px rgba(20,184,154,.35));}
+
+/* Kartu metrik */
+.metric-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:4px;}
+.metric-card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:14px;
+  box-shadow:var(--ava-elevation-card,0 1px 2px rgba(0,0,0,.05));}
+.metric-card__ic{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;
+  background:color-mix(in srgb,currentColor 14%,transparent);margin-bottom:8px;}
+.metric-card__label{font-size:12px;color:var(--muted);}
+.metric-card__val{font-size:22px;font-weight:800;color:var(--ink);letter-spacing:-.01em;margin:1px 0 6px;}
+.metric-card__unit{font-size:13px;font-weight:600;color:var(--muted);}
+.metric-card__sub{font-size:11px;font-weight:700;color:var(--muted);margin-top:2px;}
+
+/* Aksi cepat */
+.qa-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.qa{display:flex;flex-direction:column;align-items:center;gap:8px;text-decoration:none;
+  background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:14px 6px;
+  box-shadow:var(--ava-elevation-card,0 1px 2px rgba(0,0,0,.05));transition:transform .1s;}
+.qa:active{transform:scale(.96);}
+.qa__ic{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;}
+.qa__label{font-size:11.5px;font-weight:600;color:var(--ink-2);text-align:center;}
+
+/* Insight AI (gelap dengan aksen) */
+.insight{position:relative;overflow:hidden;margin:16px 0 14px;border-radius:24px;padding:18px;color:#EAF6F1;
+  background:radial-gradient(120% 140% at 100% 0%,#173F5A 0%,#122A3B 45%,#0E2230 100%);
+  border:1px solid rgba(120,180,255,.16);box-shadow:0 16px 36px -22px rgba(0,0,0,.6);}
+.insight__tag{position:absolute;top:16px;right:16px;font-size:11px;font-weight:800;color:#0E2230;
+  background:linear-gradient(120deg,#6EE7C7,#14B89A);padding:3px 9px;border-radius:999px;}
+.insight__title{font-size:13px;color:#9FB6C9;font-weight:600;}
+.insight__head{font-size:17px;font-weight:800;margin:4px 0 4px;max-width:78%;}
+.insight__body{font-size:13.5px;color:#B9CBD9;line-height:1.5;max-width:80%;}
+.insight__glow{position:absolute;right:14px;bottom:10px;color:#7FB0FF;opacity:.5;}
+
+/* Kartu brand-gradien untuk mode terang biar tak flat */
+@media (prefers-reduced-motion:no-preference){
+  .card,.metric-card,.qa{transition:box-shadow .2s,transform .1s,border-color .2s;}
+}
