@@ -1,7 +1,7 @@
 'use client';
 // apps/customer/components/RiwayatList.tsx — riwayat lengkap + filter jenis + tren.
 import React, { useMemo, useState } from 'react';
-import { TriagePill, Sparkline } from './widgets';
+import { TriagePill, TrendChart } from './widgets';
 import type { ReadingView, Trend } from '../lib/data';
 
 function fmt(ts: string) {
@@ -42,20 +42,18 @@ export function RiwayatList({ readings, trends }: { readings: ReadingView[]; tre
       {shownTrends.length > 0 && (
         <>
           <div className="section-h">Tren</div>
-          <div className="card">
-            {shownTrends.map((t) => {
-              const last = t.points[t.points.length - 1]!;
-              return (
-                <div className="trend" key={t.type}>
-                  <div className="trend__head">
-                    <span className="trend__label">{t.label}</span>
-                    <span className="trend__last">{last.n}<span className="u"> {t.unit}</span></span>
-                  </div>
-                  <Sparkline values={t.points.map((p) => p.n)} triages={t.points.map((p) => p.triage)} />
+          {shownTrends.map((t) => {
+            const last = t.points[t.points.length - 1]!;
+            return (
+              <div className="card" key={t.type}>
+                <div className="trend__head" style={{ marginBottom: 6 }}>
+                  <span className="trend__label">{t.label}</span>
+                  <span className="trend__last">{last.n}<span className="u"> {t.unit}</span></span>
                 </div>
-              );
-            })}
-          </div>
+                <TrendChart values={t.points.map((p) => p.n)} unit={t.unit} />
+              </div>
+            );
+          })}
         </>
       )}
 

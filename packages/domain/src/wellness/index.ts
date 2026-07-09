@@ -5,3 +5,4 @@ export * from './types.js';
 export * from './progress.js';
 export * from './catalog.js';
 export * from './calculators.js';
+export * from './score.js';
