@@ -11,16 +11,34 @@ import { DataPrivacy } from '../../components/DataPrivacy';
 
 export const dynamic = 'force-dynamic';
 
-const FEATURES: { href: string; label: string; desc: string }[] = [
-  { href: '/riwayat', label: 'Riwayat & tren', desc: 'Semua hasil pemeriksaan' },
-  { href: '/catat', label: 'Catat panel lengkap', desc: 'Isi banyak parameter sekaligus' },
-  { href: '/rewards', label: 'Lencana & rewards', desc: 'Pencapaian kebiasaan sehat' },
-  { href: '/perangkat', label: 'Perangkat & smartwatch', desc: 'Hubungkan wearable, lihat tren' },
-  { href: '/pendamping', label: 'Pendamping keluarga', desc: 'Berbagi & memantau' },
-  { href: '/kerja', label: 'Wellness kantor', desc: 'Program pemberi kerja' },
-  { href: '/notifikasi', label: 'Notifikasi', desc: 'Pengingat & nudge' },
-  { href: '/langganan', label: 'Langganan', desc: 'Kelola paket Premium' },
+const FEATURES: { href: string; label: string; desc: string; icon: string }[] = [
+  { href: '/riwayat', label: 'Riwayat & tren', desc: 'Semua hasil pemeriksaan', icon: 'chart' },
+  { href: '/catat', label: 'Catat panel lengkap', desc: 'Isi banyak parameter sekaligus', icon: 'edit' },
+  { href: '/rewards', label: 'Lencana & rewards', desc: 'Pencapaian kebiasaan sehat', icon: 'award' },
+  { href: '/perangkat', label: 'Perangkat & smartwatch', desc: 'Hubungkan wearable, lihat tren', icon: 'watch' },
+  { href: '/pendamping', label: 'Pendamping keluarga', desc: 'Berbagi & memantau', icon: 'users' },
+  { href: '/kerja', label: 'Wellness kantor', desc: 'Program pemberi kerja', icon: 'briefcase' },
+  { href: '/notifikasi', label: 'Notifikasi', desc: 'Pengingat & nudge', icon: 'bell' },
+  { href: '/langganan', label: 'Langganan', desc: 'Kelola paket Premium', icon: 'star' },
 ];
+
+function MenuIcon({ name }: { name: string }) {
+  const p: Record<string, React.ReactNode> = {
+    chart: <><path d="M3 3v18h18" /><path d="M7 15l3-4 3 2 4-6" /></>,
+    edit: <><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></>,
+    award: <><circle cx="12" cy="8" r="5" /><path d="M8.2 12 7 22l5-3 5 3-1.2-10" /></>,
+    watch: <><rect x="6" y="6" width="12" height="12" rx="3" /><path d="M9 6l.5-3h5l.5 3M9 18l.5 3h5l.5-3" /></>,
+    users: <><circle cx="9" cy="8" r="3.5" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" /><path d="M16 4a3.5 3.5 0 0 1 0 7M21 20c0-2.3-1.3-4.3-3.2-5.3" /></>,
+    briefcase: <><rect x="3" y="7" width="18" height="13" rx="2" /><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></>,
+    bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></>,
+    star: <><path d="M12 3l2.7 5.5 6 .9-4.3 4.2 1 6-5.4-2.8L6.6 19.6l1-6L3.3 9.4l6-.9Z" /></>,
+  };
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      {p[name] ?? p.chart}
+    </svg>
+  );
+}
 
 export default async function AkunPage() {
   const auth = await getCustomerAuth();
@@ -36,33 +54,21 @@ export default async function AkunPage() {
 
   return (
     <div className="screen">
-      <header style={{ marginBottom: 'var(--ava-space-5)' }}>
-        <p style={{
-          fontFamily: 'var(--ava-font-mono)', fontSize: 'var(--ava-text-xs)',
-          letterSpacing: '0.08em', textTransform: 'uppercase',
-          color: 'var(--ava-color-trust-600)', margin: 0,
-        }}>
-          Akun
-        </p>
-        <h1 style={{
-          fontFamily: 'var(--ava-font-display)', fontSize: 'var(--ava-text-2xl)',
-          fontWeight: 600, color: 'var(--ava-color-ink-900)', margin: '4px 0 0',
-        }}>
-          Profil & pengaturan
-        </h1>
+      <header className="phead">
+        <p className="phead__kicker">Akun</p>
+        <h1 className="phead__title">Profil & pengaturan</h1>
       </header>
 
-      {/* Identitas */}
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-          <div>
-            <div style={{ fontWeight: 600, color: 'var(--ava-color-ink-900)' }}>{auth.email ?? 'Pengguna'}</div>
-            <div style={{ fontSize: 13, color: 'var(--ava-color-ink-500)' }}>Masuk sebagai Masyarakat</div>
-          </div>
-          <span className={`pill ${billing.effective === 'premium' ? 'pill--normal' : 'pill--none'}`}>
-            {billing.effective === 'premium' ? 'Premium' : 'Gratis'}
-          </span>
+      {/* Identitas — kartu profil premium */}
+      <div className="pfp">
+        <div className="pfp__avatar">{(profile.fullName?.[0] ?? auth.email?.[0] ?? 'A').toUpperCase()}</div>
+        <div style={{ minWidth: 0 }}>
+          <div className="pfp__name">{profile.fullName || 'Pengguna AVA'}</div>
+          <div className="pfp__mail">{auth.email ?? 'Masyarakat'}</div>
         </div>
+        <span className={`pfp__plan ${billing.effective === 'premium' ? 'is-premium' : ''}`}>
+          {billing.effective === 'premium' ? '★ Premium' : 'Gratis'}
+        </span>
       </div>
 
       {/* Profil medis */}
@@ -86,17 +92,15 @@ export default async function AkunPage() {
 
       {/* Semua fitur */}
       <div className="section-h">Semua fitur</div>
-      <div className="card" style={{ padding: 0 }}>
-        {FEATURES.map((f, i) => (
-          <Link key={f.href} href={f.href} className="read" style={{
-            textDecoration: 'none', padding: '14px 18px',
-            borderBottom: i < FEATURES.length - 1 ? '1px solid var(--ava-color-line)' : 'none',
-          }}>
-            <div className="read__main">
-              <div className="read__label">{f.label}</div>
-              <div className="read__meta">{f.desc}</div>
+      <div className="menu">
+        {FEATURES.map((f) => (
+          <Link key={f.href} href={f.href} className="menu__item">
+            <span className="menu__ic"><MenuIcon name={f.icon} /></span>
+            <div className="menu__main">
+              <div className="menu__label">{f.label}</div>
+              <div className="menu__desc">{f.desc}</div>
             </div>
-            <span aria-hidden style={{ fontSize: 20, color: 'var(--ava-color-trust-600)' }}>→</span>
+            <svg className="menu__arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 6l6 6-6 6" /></svg>
           </Link>
         ))}
       </div>

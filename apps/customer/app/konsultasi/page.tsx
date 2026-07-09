@@ -24,9 +24,29 @@ export default async function Konsultasi({ searchParams }: { searchParams: { sha
 
   return (
     <div className="screen">
-      <h1 className="hello">Konsultasi</h1>
-      <p>Bicara dengan dokter dan bagikan hasil pilihanmu.</p>
+      <header className="phead">
+        <p className="phead__kicker">Konsultasi</p>
+        <h1 className="phead__title">Bicara dengan dokter</h1>
+        <p className="phead__sub">Ajukan sesi dan bagikan hasil pemeriksaan pilihanmu — aman & atas persetujuanmu.</p>
+      </header>
 
+      {docs.length > 0 && (
+        <>
+          <div className="section-h">Dokter tersedia</div>
+          {docs.slice(0, 4).map((d) => (
+            <div className="doc" key={d.id}>
+              <div className="doc__avatar">{(d.name?.replace(/^dr\.?\s*/i, '')[0] ?? 'D').toUpperCase()}</div>
+              <div className="doc__main">
+                <div className="doc__name">{d.name}</div>
+                <div className="doc__spec">Dokter umum · konsultasi teks</div>
+                <span className="doc__online">Tersedia hari ini</span>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+
+      <div className="section-h">Ajukan konsultasi</div>
       <div className="card"><ConsultBooking doctors={docs} readings={readings} preselect={searchParams.share} /></div>
 
       <div className="section-h">Konsultasimu</div>

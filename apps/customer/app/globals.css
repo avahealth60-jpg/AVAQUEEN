@@ -223,3 +223,58 @@ body{font-family:var(--sans);color:var(--ink);background:var(--app-bg);-webkit-f
 @media (prefers-reduced-motion:no-preference){
   .card,.metric-card,.qa{transition:box-shadow .2s,transform .1s,border-color .2s;}
 }
+
+/* ═══════════════════ HALAMAN PREMIUM (wellness/konsultasi/akun) ═══════════════════ */
+/* Header halaman seragam */
+.phead{margin:8px 0 18px;}
+.phead__kicker{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--brand-ink);margin:0;}
+.phead__title{font-size:26px;font-weight:800;letter-spacing:-.02em;color:var(--ink);margin:4px 0 0;}
+.phead__sub{color:var(--muted);font-size:14px;line-height:1.5;margin:6px 0 0;}
+
+/* Kartu profil (akun) */
+.pfp{display:flex;align-items:center;gap:14px;padding:20px;border-radius:26px;margin-bottom:16px;color:#EAF6F1;
+  background:radial-gradient(120% 130% at 85% -20%,#12463C 0%,#0C2A25 55%,#0A211D 100%);
+  border:1px solid rgba(110,231,199,.14);box-shadow:0 18px 40px -24px rgba(0,0,0,.6);}
+.pfp__avatar{width:56px;height:56px;flex:none;border-radius:18px;display:grid;place-items:center;font-weight:800;font-size:22px;
+  color:#0A211D;background:linear-gradient(140deg,#8FE7CE,#14B89A);}
+.pfp__name{font-size:18px;font-weight:800;letter-spacing:-.01em;}
+.pfp__mail{font-size:13px;color:#9FC7BB;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;}
+.pfp__plan{margin-left:auto;flex:none;font-size:11px;font-weight:800;padding:5px 11px;border-radius:999px;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#C9EFE3;}
+.pfp__plan.is-premium{background:linear-gradient(120deg,#6EE7C7,#14B89A);color:#0A211D;border-color:transparent;}
+
+/* Menu list premium (akun) */
+.menu{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:14px;
+  box-shadow:var(--ava-elevation-card,0 1px 2px rgba(0,0,0,.05));}
+.menu__item{display:flex;align-items:center;gap:14px;padding:15px 16px;text-decoration:none;color:var(--ink);
+  border-bottom:1px solid var(--line);transition:background .12s;}
+.menu__item:last-child{border-bottom:none;}
+.menu__item:hover{background:color-mix(in srgb,var(--brand) 6%,var(--surface));}
+.menu__ic{width:40px;height:40px;flex:none;border-radius:13px;display:grid;place-items:center;
+  color:var(--brand-ink);background:var(--brand-bg);}
+.menu__main{flex:1;min-width:0;}
+.menu__label{font-weight:700;font-size:15px;}
+.menu__desc{font-size:12.5px;color:var(--muted);margin-top:1px;}
+.menu__arrow{color:var(--muted);flex:none;}
+
+/* Ringkasan aktivitas (wellness) — 3 metrik ala Apple Health */
+.wsum{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.wsum__c{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:14px 10px;text-align:center;
+  box-shadow:var(--ava-elevation-card,0 1px 2px rgba(0,0,0,.05));}
+.wsum__ic{width:36px;height:36px;margin:0 auto 8px;border-radius:12px;display:grid;place-items:center;
+  background:color-mix(in srgb,currentColor 15%,transparent);}
+.wsum__val{font-size:19px;font-weight:800;color:var(--ink);letter-spacing:-.01em;}
+.wsum__unit{font-size:11px;font-weight:700;color:var(--muted);}
+.wsum__label{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* Kartu dokter premium (konsultasi) */
+.doc{display:flex;align-items:center;gap:13px;padding:14px;border:1px solid var(--line);border-radius:20px;
+  background:var(--surface);margin-bottom:10px;box-shadow:var(--ava-elevation-card,0 1px 2px rgba(0,0,0,.05));}
+.doc__avatar{width:48px;height:48px;flex:none;border-radius:15px;display:grid;place-items:center;font-weight:800;font-size:18px;
+  color:#fff;background:linear-gradient(140deg,#14B89A,#0F8B73);}
+.doc__main{flex:1;min-width:0;}
+.doc__name{font-weight:800;font-size:15px;color:var(--ink);}
+.doc__spec{font-size:12.5px;color:var(--muted);margin-top:1px;}
+.doc__online{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--normal);margin-top:4px;}
+.doc__online::before{content:"";width:7px;height:7px;border-radius:999px;background:var(--normal);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--normal) 25%,transparent);}

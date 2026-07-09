@@ -1,6 +1,7 @@
 -- ============================================================================
 -- AVA Health — SETUP DB LENGKAP (semua migrasi 0001–v126, berurutan)
 -- Supabase SQL Editor → tempel SELURUH file → Run. Idempoten. Lalu check.sql.
+-- Regenerasi otomatis dari supabase/migrations/*.sql (jangan edit manual).
 -- ============================================================================
 
 -- ┌── migrations/0001_enums.sql
@@ -28,6 +29,7 @@ do $$ begin
 exception when duplicate_object then null;
 end $$;
 
+-- └── end 0001_enums.sql
 
 -- ┌── migrations/0002_core_tables.sql
 -- 0002_core_tables.sql
@@ -200,6 +202,7 @@ create index on health_readings(customer_id);
 create index on consultations(doctor_id);
 create index on consultations(customer_id);
 
+-- └── end 0002_core_tables.sql
 
 -- ┌── migrations/0003_rls.sql
 -- 0003_rls.sql
@@ -369,6 +372,7 @@ drop policy if exists "member reads own membership" on organization_members;
 create policy "member reads own membership" on organization_members
   for select using (profile_id = auth.uid() or app.is_admin());
 
+-- └── end 0003_rls.sql
 
 -- ┌── migrations/0004_triggers_grants.sql
 -- 0004_triggers_grants.sql
@@ -414,6 +418,7 @@ grant select, insert, update, delete on all tables in schema public to authentic
 grant select on all tables in schema public to anon;
 grant execute on all functions in schema app to authenticated, anon;
 
+-- └── end 0004_triggers_grants.sql
 
 -- ┌── migrations/0005_auth_profiles.sql
 -- 0005_auth_profiles.sql
@@ -445,6 +450,7 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
+-- └── end 0005_auth_profiles.sql
 
 -- ┌── migrations/0006_badge_issuance.sql
 -- 0006_badge_issuance.sql
@@ -489,6 +495,7 @@ create trigger trg_issue_badge_on_qc
   after insert on qc_results
   for each row execute function app.issue_badge_on_qc();
 
+-- └── end 0006_badge_issuance.sql
 
 -- ┌── migrations/0007_partner_policies.sql
 -- 0007_partner_policies.sql
@@ -508,6 +515,7 @@ create policy "vendor reads qc of own devices" on qc_results
     )
   );
 
+-- └── end 0007_partner_policies.sql
 
 -- ┌── migrations/0008_analysis_write.sql
 -- 0008_analysis_write.sql
@@ -526,6 +534,7 @@ create policy "customer writes analysis for own readings" on analysis_results
     )
   );
 
+-- └── end 0008_analysis_write.sql
 
 -- ┌── migrations/0009_consultations_commerce.sql
 -- 0009_consultations_commerce.sql
@@ -595,6 +604,7 @@ create policy "doctor reads own patients" on profiles
 
 grant select, insert, update, delete on commissions to authenticated;
 
+-- └── end 0009_consultations_commerce.sql
 
 -- ┌── migrations/20260628093000_v111_pemeriksaan_katalog.sql
 -- ============================================================================
@@ -808,6 +818,7 @@ create policy "customer owns checkup_values" on checkup_values
 -- (is_educational=true + disclaimer) seperti V1.0 — tak tersentuh migrasi ini.
 -- ============================================================================
 
+-- └── end 20260628093000_v111_pemeriksaan_katalog.sql
 
 -- ┌── migrations/20260628093001_v111_seed_katalog.sql
 -- ============================================================================
@@ -881,6 +892,7 @@ on conflict (parameter_id, cohort) do update
       urgent_low = excluded.urgent_low, urgent_high = excluded.urgent_high,
       source = excluded.source, signed_off_by = excluded.signed_off_by, signed_off_at = excluded.signed_off_at;
 
+-- └── end 20260628093001_v111_seed_katalog.sql
 
 -- ┌── migrations/20260628094000_v112_basis_pengetahuan.sql
 -- ============================================================================
@@ -928,6 +940,7 @@ create policy "pengetahuan admin write" on knowledge_entries
 -- ke pengguna selalu is_educational=true + disclaimer (analysis_results, V1.0).
 -- ============================================================================
 
+-- └── end 20260628094000_v112_basis_pengetahuan.sql
 
 -- ┌── migrations/20260628094001_v112_seed_pengetahuan.sql
 -- ============================================================================
@@ -971,6 +984,7 @@ on conflict (parameter_id, triage) do update
       kapan_ke_dokter = excluded.kapan_ke_dokter, source = excluded.source,
       signed_off_by = excluded.signed_off_by, signed_off_at = excluded.signed_off_at;
 
+-- └── end 20260628094001_v112_seed_pengetahuan.sql
 
 -- ┌── migrations/20260705100000_v113_wearable.sql
 -- 20260705100000_v113_wearable.sql
@@ -1021,6 +1035,7 @@ create policy "admin reads wearable connections" on wearable_connections
 
 grant select, insert, update, delete on wearable_connections to authenticated;
 
+-- └── end 20260705100000_v113_wearable.sql
 
 -- ┌── migrations/20260705110000_v114_wellness.sql
 -- 20260705110000_v114_wellness.sql
@@ -1084,6 +1099,7 @@ create policy "admin reads checkins" on wellness_checkins
 grant select, insert, update, delete on wellness_enrollments to authenticated;
 grant select, insert, update, delete on wellness_checkins to authenticated;
 
+-- └── end 20260705110000_v114_wellness.sql
 
 -- ┌── migrations/20260705120000_v115_caregiver.sql
 -- 20260705120000_v115_caregiver.sql
@@ -1190,6 +1206,7 @@ grant select, insert, update, delete on caregiver_links to authenticated;
 grant execute on function public.claim_caregiver_invite(text) to authenticated;
 grant execute on function app.is_active_caregiver_of(uuid, text) to authenticated;
 
+-- └── end 20260705120000_v115_caregiver.sql
 
 -- ┌── migrations/20260705130000_v116_billing.sql
 -- 20260705130000_v116_billing.sql
@@ -1295,6 +1312,7 @@ grant select on subscriptions to authenticated;
 grant execute on function public.mock_confirm_payment(uuid) to authenticated;
 grant execute on function public.cancel_my_subscription() to authenticated;
 
+-- └── end 20260705130000_v116_billing.sql
 
 -- ┌── migrations/20260705140000_v117_marketplace.sql
 -- 20260705140000_v117_marketplace.sql
@@ -1433,6 +1451,7 @@ grant select, insert, update, delete on orders to authenticated;
 grant select, insert, update, delete on order_items to authenticated;
 grant execute on function public.verified_listing_ids() to anon, authenticated;
 
+-- └── end 20260705140000_v117_marketplace.sql
 
 -- ┌── migrations/20260705150000_v118_corporate.sql
 -- 20260705150000_v118_corporate.sql
@@ -1561,6 +1580,7 @@ grant execute on function public.join_employer(text) to authenticated;
 grant execute on function public.employer_wellness_summary(uuid) to authenticated;
 grant execute on function public.set_employer_join_code(uuid, text) to authenticated;
 
+-- └── end 20260705150000_v118_corporate.sql
 
 -- ┌── migrations/20260705160000_v119_customer_profile.sql
 -- 20260705160000_v119_customer_profile.sql
@@ -1634,6 +1654,7 @@ $$;
 
 grant execute on function public.delete_my_account() to authenticated;
 
+-- └── end 20260705160000_v119_customer_profile.sql
 
 -- ┌── migrations/20260705170000_v120_consult_notes.sql
 -- 20260705170000_v120_consult_notes.sql
@@ -1643,6 +1664,7 @@ grant execute on function public.delete_my_account() to authenticated;
 -- "doctor updates assigned consultation".
 alter table consultations add column if not exists doctor_note text;
 
+-- └── end 20260705170000_v120_consult_notes.sql
 
 -- ┌── migrations/20260705180000_v121_consult_rating.sql
 -- 20260705180000_v121_consult_rating.sql
@@ -1652,6 +1674,7 @@ alter table consultations add column if not exists doctor_note text;
 alter table consultations add column if not exists rating int check (rating between 1 and 5);
 alter table consultations add column if not exists rating_comment text;
 
+-- └── end 20260705180000_v121_consult_rating.sql
 
 -- ┌── migrations/20260705190000_v122_push_subscriptions.sql
 -- 20260705190000_v122_push_subscriptions.sql
@@ -1676,6 +1699,7 @@ create policy "customer manages own push subs" on push_subscriptions
 
 grant select, insert, update, delete on push_subscriptions to authenticated;
 
+-- └── end 20260705190000_v122_push_subscriptions.sql
 
 -- ┌── migrations/20260705200000_v123_consult_messages.sql
 -- 20260705200000_v123_consult_messages.sql
@@ -1714,6 +1738,7 @@ create policy "participant sends consult message" on consultation_messages
 grant select, insert on consultation_messages to authenticated;
 grant execute on function app.is_consult_participant(uuid) to authenticated;
 
+-- └── end 20260705200000_v123_consult_messages.sql
 
 -- ┌── migrations/20260705210000_v124_vendor_fulfillment.sql
 -- 20260705210000_v124_vendor_fulfillment.sql
@@ -1743,6 +1768,7 @@ $$;
 
 grant execute on function public.vendor_set_order_status(uuid, text) to authenticated;
 
+-- └── end 20260705210000_v124_vendor_fulfillment.sql
 
 -- ┌── migrations/20260705220000_v125_faskes.sql
 -- 20260705220000_v125_faskes.sql
@@ -1819,6 +1845,7 @@ grant execute on function public.join_faskes(text) to authenticated;
 grant execute on function public.faskes_set_join_code(uuid, text) to authenticated;
 grant execute on function public.faskes_summary(uuid) to authenticated;
 
+-- └── end 20260705220000_v125_faskes.sql
 
 -- ┌── migrations/20260705230000_v126_doctor_verification.sql
 -- 20260705230000_v126_doctor_verification.sql
@@ -1862,3 +1889,4 @@ $$;
 
 grant execute on function public.set_doctor_verification(uuid, text) to authenticated;
 
+-- └── end 20260705230000_v126_doctor_verification.sql

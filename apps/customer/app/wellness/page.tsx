@@ -2,7 +2,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { getCustomerAuth } from '../../lib/auth';
-import { wellnessDashboard, myProfile } from '../../lib/data';
+import { wellnessDashboard, myProfile, homeData } from '../../lib/data';
 import { ConnBanner } from '../../components/ConnBanner';
 import { WellnessCard } from '../../components/WellnessCard';
 import { WellnessCalculators } from '../../components/WellnessCalculators';
@@ -13,30 +13,38 @@ export default async function WellnessPage() {
   const { configured } = await getCustomerAuth();
   if (!configured) return <div className="screen"><ConnBanner /></div>;
 
-  const [cards, profile] = await Promise.all([wellnessDashboard(), myProfile()]);
+  const [cards, profile, home] = await Promise.all([wellnessDashboard(), myProfile(), homeData()]);
   const active = cards.filter((c) => c.enrolled);
   const available = cards.filter((c) => !c.enrolled);
+  const steps = home.metrics.find((m) => m.key === 'steps');
+  const sleep = home.metrics.find((m) => m.key === 'sleep_minutes');
 
   return (
     <div className="screen">
-      <header style={{ marginBottom: 'var(--ava-space-5)' }}>
-        <p style={{
-          fontFamily: 'var(--ava-font-mono)', fontSize: 'var(--ava-text-xs)',
-          letterSpacing: '0.08em', textTransform: 'uppercase',
-          color: 'var(--ava-color-trust-600)', margin: 0,
-        }}>
-          Wellness
-        </p>
-        <h1 style={{
-          fontFamily: 'var(--ava-font-display)', fontSize: 'var(--ava-text-2xl)',
-          fontWeight: 600, color: 'var(--ava-color-ink-900)', margin: '4px 0 0',
-        }}>
-          Program & kebiasaan sehat
-        </h1>
-        <p style={{ color: 'var(--ava-color-ink-500)', margin: '4px 0 0' }}>
-          Target harian yang ramah & realistis — terhubung dengan langkah, tidur, dan aktivitasmu.
-        </p>
+      <header className="phead">
+        <p className="phead__kicker">Wellness</p>
+        <h1 className="phead__title">Program & kebiasaan sehat</h1>
+        <p className="phead__sub">Target harian yang ramah & realistis — terhubung dengan langkah, tidur, dan aktivitasmu.</p>
       </header>
+
+      {/* Ringkasan aktivitas hari ini */}
+      <div className="wsum">
+        <div className="wsum__c" style={{ color: '#F5A524' }}>
+          <div className="wsum__ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 3l-2 6h5l-6 12 2-8H7l6-10z" /></svg></div>
+          <div className="wsum__val">{steps?.value ?? '—'}</div>
+          <div className="wsum__label">Langkah</div>
+        </div>
+        <div className="wsum__c" style={{ color: '#6D6AFB' }}>
+          <div className="wsum__ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" /></svg></div>
+          <div className="wsum__val">{sleep?.value ?? '—'}</div>
+          <div className="wsum__label">Tidur</div>
+        </div>
+        <div className="wsum__c" style={{ color: '#14B89A' }}>
+          <div className="wsum__ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg></div>
+          <div className="wsum__val">{active.length}</div>
+          <div className="wsum__label">Program aktif</div>
+        </div>
+      </div>
 
       <WellnessCalculators initial={{
         beratKg: profile.weightKg, tinggiCm: profile.heightCm,
