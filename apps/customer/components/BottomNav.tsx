@@ -4,6 +4,7 @@
 // Menampilkan 5 menu utama; sisanya (Riwayat, Wellness, Rewards) diakses dari Beranda.
 // Tanpa dependency ikon eksternal — ikon SVG inline agar pasti jalan.
 import React from 'react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { getNav } from '@ava/ui';
 
@@ -45,21 +46,21 @@ export function BottomNav() {
   const tab = (item: (typeof items)[number]) => {
     const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
     return (
-      <a key={item.id} href={item.href} aria-current={active ? 'page' : undefined}
+      <Link key={item.id} href={item.href} prefetch aria-current={active ? 'page' : undefined}
         className={`navbtn${active ? ' is-active' : ''}`}>
         <Icon id={item.id} active={active} />
         <span>{item.label.split(' ')[0]}</span>
         <span className="navbtn__dot" aria-hidden />
-      </a>
+      </Link>
     );
   };
 
   return (
     <nav aria-label="Navigasi utama" className="navbar">
       {left.map(tab)}
-      <a href="/catat" className="navfab" aria-label="Catat pemeriksaan">
+      <Link href="/catat" prefetch className="navfab" aria-label="Catat pemeriksaan">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-      </a>
+      </Link>
       {right.map(tab)}
     </nav>
   );
