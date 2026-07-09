@@ -11,6 +11,7 @@ import { hasActiveConsent } from '../lib/data';
 import { LoginForm } from '../components/LoginForm';
 import { AppBar } from '../components/AppBar';
 import { BottomNav } from '../components/BottomNav';
+import { FloatingAssistant } from '../components/FloatingAssistant';
 
 const inter = Inter({ subsets: ['latin'], variable: '--ava-font-body' });
 const display = Space_Grotesk({ subsets: ['latin'], variable: '--ava-font-display' });
@@ -47,6 +48,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <div className="app">
           {auth.configured && <AppBar hasConsent={consent} />}
           {children}
+          {auth.configured && consent && <FloatingAssistant />}
           {auth.configured && <BottomNav />}
         </div>
       </body>

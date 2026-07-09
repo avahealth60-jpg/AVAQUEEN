@@ -7,10 +7,9 @@ import React from 'react';
 import { usePathname } from 'next/navigation';
 import { getNav } from '@ava/ui';
 
-// Menu yang muncul di bar bawah (mobile: maksimal ~5 agar tetap terbaca).
-// Sisanya (perangkat, pendamping, kerja, langganan, notifikasi) diakses dari
-// kartu di Beranda & halaman Akun.
-const PRIMARY = ['beranda', 'wellness', 'toko', 'konsultasi', 'akun'];
+// 4 menu utama mengapit tombol "+" (catat) di tengah. Sisanya (toko, perangkat,
+// pendamping, kerja, langganan, notifikasi) diakses dari Beranda & halaman Akun.
+const PRIMARY = ['beranda', 'wellness', 'konsultasi', 'akun'];
 
 function Icon({ id, active }: { id: string; active: boolean }) {
   const c = active ? 'var(--ava-color-trust-600)' : 'var(--ava-color-ink-500)';
@@ -41,36 +40,27 @@ export function BottomNav() {
     .map((id) => nav.items.find((i) => i.id === id))
     .filter((i): i is NonNullable<typeof i> => Boolean(i));
 
+  const left = items.slice(0, 2);
+  const right = items.slice(2);
+  const tab = (item: (typeof items)[number]) => {
+    const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
+    return (
+      <a key={item.id} href={item.href} aria-current={active ? 'page' : undefined}
+        className={`navbtn${active ? ' is-active' : ''}`}>
+        <Icon id={item.id} active={active} />
+        <span>{item.label.split(' ')[0]}</span>
+        <span className="navbtn__dot" aria-hidden />
+      </a>
+    );
+  };
+
   return (
-    <nav
-      aria-label="Navigasi utama"
-      style={{
-        position: 'sticky', bottom: 0, zIndex: 10,
-        display: 'flex', background: 'var(--ava-color-surface-0)',
-        borderTop: '1px solid var(--ava-color-line)',
-        paddingBottom: 'env(safe-area-inset-bottom, 0)',
-      }}
-    >
-      {items.map((item) => {
-        const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
-        const short = item.label.split(' ')[0];
-        return (
-          <a
-            key={item.id}
-            href={item.href}
-            aria-current={active ? 'page' : undefined}
-            style={{
-              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-              gap: 3, padding: '9px 0 8px', textDecoration: 'none',
-              color: active ? 'var(--ava-color-trust-600)' : 'var(--ava-color-ink-500)',
-              background: active ? 'var(--ava-color-trust-100)' : 'transparent',
-            }}
-          >
-            <Icon id={item.id} active={active} />
-            <span style={{ fontSize: 11, fontWeight: active ? 600 : 500 }}>{short}</span>
-          </a>
-        );
-      })}
+    <nav aria-label="Navigasi utama" className="navbar">
+      {left.map(tab)}
+      <a href="/catat" className="navfab" aria-label="Catat pemeriksaan">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+      </a>
+      {right.map(tab)}
     </nav>
   );
 }

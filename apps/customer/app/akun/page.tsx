@@ -12,6 +12,7 @@ import { DataPrivacy } from '../../components/DataPrivacy';
 export const dynamic = 'force-dynamic';
 
 const FEATURES: { href: string; label: string; desc: string; icon: string }[] = [
+  { href: '/toko', label: 'Toko alat ber-badge', desc: 'Beli alat kesehatan terverifikasi', icon: 'bag' },
   { href: '/riwayat', label: 'Riwayat & tren', desc: 'Semua hasil pemeriksaan', icon: 'chart' },
   { href: '/catat', label: 'Catat panel lengkap', desc: 'Isi banyak parameter sekaligus', icon: 'edit' },
   { href: '/rewards', label: 'Lencana & rewards', desc: 'Pencapaian kebiasaan sehat', icon: 'award' },
@@ -24,6 +25,7 @@ const FEATURES: { href: string; label: string; desc: string; icon: string }[] = 
 
 function MenuIcon({ name }: { name: string }) {
   const p: Record<string, React.ReactNode> = {
+    bag: <><path d="M6 8h12l-1 12H7L6 8z" /><path d="M9 8a3 3 0 0 1 6 0" /></>,
     chart: <><path d="M3 3v18h18" /><path d="M7 15l3-4 3 2 4-6" /></>,
     edit: <><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></>,
     award: <><circle cx="12" cy="8" r="5" /><path d="M8.2 12 7 22l5-3 5 3-1.2-10" /></>,

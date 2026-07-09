@@ -141,14 +141,44 @@ body{font-family:var(--sans);color:var(--ink);background:var(--app-bg);-webkit-f
 :focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:8px;}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
 
-/* ── Bottom nav ──────────────────────────────────────── */
-.bnav{position:fixed;left:0;right:0;bottom:0;z-index:20;margin:0 auto;max-width:480px;
-  background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;
-  padding:6px 8px;padding-bottom:calc(6px + env(safe-area-inset-bottom));}
-.bnav__tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px;border-radius:12px;
-  text-decoration:none;color:var(--muted);font-size:12px;font-weight:600;}
-.bnav__tab.is-active{color:var(--brand-ink);background:var(--brand-bg);}
-.bnav__icon{font-size:18px;line-height:1;}
+/* ── Bottom nav premium + FAB tengah ─────────────────── */
+.navbar{position:sticky;bottom:0;z-index:20;display:flex;align-items:flex-end;justify-content:space-around;
+  background:color-mix(in srgb,var(--surface) 86%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-top:1px solid var(--line);padding:8px 6px;padding-bottom:calc(8px + env(safe-area-inset-bottom));}
+.navbtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;text-decoration:none;
+  color:var(--muted);font-size:11px;font-weight:600;transition:color .15s;}
+.navbtn.is-active{color:var(--brand-ink);}
+.navbtn__dot{width:5px;height:5px;border-radius:999px;background:transparent;margin-top:1px;transition:background .15s;}
+.navbtn.is-active .navbtn__dot{background:var(--brand);}
+.navfab{flex:0 0 auto;width:56px;height:56px;margin:-24px 4px 0;border-radius:20px;display:grid;place-items:center;
+  color:#fff;text-decoration:none;background:linear-gradient(140deg,#22D3A6,#0F8B73);
+  box-shadow:0 12px 26px -8px color-mix(in srgb,#14B89A 80%,transparent),0 0 0 5px var(--app-bg);
+  transition:transform .12s;}
+.navfab:active{transform:scale(.92);}
+
+/* ── Floating AI Assistant ───────────────────────────── */
+.fab-ai{position:fixed;z-index:25;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));
+  display:inline-flex;align-items:center;gap:8px;padding:11px 16px 11px 13px;border-radius:999px;text-decoration:none;
+  color:#EAF6F1;font-size:13px;font-weight:800;
+  background:radial-gradient(120% 140% at 100% 0%,#173F5A,#0E2230);border:1px solid rgba(120,180,255,.22);
+  box-shadow:0 14px 34px -14px rgba(0,0,0,.6);}
+.fab-ai__spark{display:grid;place-items:center;width:26px;height:26px;border-radius:999px;color:#0E2230;
+  background:linear-gradient(120deg,#6EE7C7,#14B89A);animation:ava-glow 2.6s ease-in-out infinite;}
+@media (max-width:400px){.fab-ai__txt{display:none;} .fab-ai{padding:12px;gap:0;}}
+
+/* ── Micro-animations (fade/scale/shimmer/glow) ──────── */
+@keyframes ava-rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+@keyframes ava-glow{0%,100%{box-shadow:0 0 0 0 rgba(110,231,199,.5);}50%{box-shadow:0 0 0 6px rgba(110,231,199,0);}}
+@keyframes ava-shimmer{100%{background-position:200% 0;}}
+@media (prefers-reduced-motion:no-preference){
+  .screen>*{animation:ava-rise .4s cubic-bezier(.22,.61,.36,1) both;}
+  .screen>*:nth-child(2){animation-delay:.04s;}
+  .screen>*:nth-child(3){animation-delay:.08s;}
+  .screen>*:nth-child(4){animation-delay:.12s;}
+  .screen>*:nth-child(5){animation-delay:.16s;}
+  .shimmer{background:linear-gradient(100deg,transparent 20%,color-mix(in srgb,var(--brand) 10%,transparent) 45%,transparent 70%);
+    background-size:200% 100%;animation:ava-shimmer 1.4s linear infinite;}
+}
 
 /* ── Booking checkboxes ──────────────────────────────── */
 .checks{display:flex;flex-direction:column;gap:8px;margin-top:4px;}
@@ -266,6 +296,20 @@ body{font-family:var(--sans);color:var(--ink);background:var(--app-bg);-webkit-f
 .wsum__val{font-size:19px;font-weight:800;color:var(--ink);letter-spacing:-.01em;}
 .wsum__unit{font-size:11px;font-weight:700;color:var(--muted);}
 .wsum__label{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* Asisten AVA (chat edukatif) */
+.ava-msg{display:flex;gap:10px;margin-bottom:14px;max-width:92%;}
+.ava-msg__ic{flex:none;width:34px;height:34px;border-radius:12px;display:grid;place-items:center;color:#0A211D;
+  background:linear-gradient(120deg,#6EE7C7,#14B89A);box-shadow:0 6px 14px -8px rgba(20,184,154,.7);}
+.ava-bubble{background:var(--surface);border:1px solid var(--line);border-radius:6px 20px 20px 20px;padding:13px 15px;
+  box-shadow:var(--ava-elevation-card,0 1px 2px rgba(0,0,0,.05));}
+.ava-bubble__title{font-weight:800;font-size:14px;color:var(--ink);margin-bottom:3px;}
+.ava-bubble__body{font-size:13.5px;line-height:1.55;color:var(--ink-2);}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 8px 44px;}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:999px;text-decoration:none;
+  font-size:13px;font-weight:700;color:var(--brand-ink);background:var(--brand-bg);
+  border:1px solid color-mix(in srgb,var(--brand) 26%,var(--line));}
+.chip:active{transform:scale(.96);}
 
 /* Kartu dokter premium (konsultasi) */
 .doc{display:flex;align-items:center;gap:13px;padding:14px;border:1px solid var(--line);border-radius:20px;
